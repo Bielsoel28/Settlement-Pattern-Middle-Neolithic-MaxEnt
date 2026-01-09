@@ -42,7 +42,7 @@ The repository folder is structured as follows:
   - **Vectors/**: All the necessary vectors for the paper 
     - **Buff_27450_mod**: Shapefile (.shp and others) with the area under study limits
     - **fishnet_rast_cat_100_red_points_v3**: Shapefile (.shp and others) with mesh of 1km background points
-    - **rast_cat_100_points**: Shapefile (.shp and others) with points from the vectorization of "11- Height" for visibility variables construction
+    - **rast_cat_100_points**: Shapefile (compressed in .zip) with points from the vectorization of "11- Height" for visibility variables construction
     - **Rast_cat_coast_line_mod**: Shapefile (.shp and others) with modified coastline for "33- Cost from coast", original data set obtained from EEA
     (https://www.eea.europa.eu/en/datahub/datahubitem-view/af40333f-9e94-4926-a4f0-0a787f1d2b8f, last accessed on 9/1/2025)
     - **Rius_&_llacs**: Shapefile (.shp and others) with modified Rivers and Lakes, original data sets obtained from IGN  
