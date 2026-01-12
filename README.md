@@ -49,6 +49,7 @@ The repository folder is structured as follows:
     (https://centrodedescargas.cnig.es/CentroDescargas/hidrografia, last accessed on 9/1/2026) and ICGC 
     (https://www.icgc.cat/ca/Geoinformacio-i-mapes/Mapes/Mapa-de-cobertes-del-sol-de-Catalunya, last accessed on 9/1/2026)
     - **sites**: Shapefile (.shp and others) with the sites used in the analysis
+  - **Sites references**: All the references for the database of sites (.pdf)
 - **Results/**: Folder to store the results of the analysis, its creation is also scripted in "Main" 
   - **Variables_cor/**: Folder to store results of correlation analysis of variables, its creation is also scripted in "Main" 
     - **selected_bg_points**: Shapefile (.shp and others) with selected background points for the MaxEnt models
