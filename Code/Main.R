@@ -53,32 +53,32 @@ keep_first_unique <- function(df, column_name) {
 
 ## Creating subsets of sites
 #General 
-loc_general <- keep_first_unique(loc,"ID_jacimen")
+loc_general <- keep_first_unique(loc,"Name")
 
 #NMI
-loc_p1 <- loc[loc$Periode == "NMI", ]
+loc_p1 <- loc[loc$Period == "NMI", ]
 
 ##Cave
-loc_p1_cov <- loc_p1[grepl("\\(cova\\)", loc_p1$Tipus_d_as, ignore.case = TRUE), ]
+loc_p1_cov <- loc_p1[grepl("\\(Cave\\)", loc_p1$Type, ignore.case = TRUE), ]
 
 ##Open-air Funerary and habitat sites
-loc_p1_all <- loc_p1[!grepl("\\(cova\\)", loc_p1$Tipus_d_as, ignore.case = TRUE), ]
-loc_p1_all_f <- loc_p1_all[grepl("Sepultura", loc_p1_all$Tipus_d_as, ignore.case = TRUE), ]
-loc_p1_all_h <- loc_p1_all[grepl("Hàbitat", loc_p1_all$Tipus_d_as, ignore.case = TRUE), ]
+loc_p1_all <- loc_p1[!grepl("\\(Cave\\)", loc_p1$Type, ignore.case = TRUE), ]
+loc_p1_all_f <- loc_p1_all[grepl("Sepulture", loc_p1_all$Type, ignore.case = TRUE), ]
+loc_p1_all_h <- loc_p1_all[grepl("Settlement", loc_p1_all$Type, ignore.case = TRUE), ]
 
 rm(loc_p1_all)
 rm(loc_p1)
 
 #NMP
-loc_p2 <- loc[loc$Periode == "NMP", ]
+loc_p2 <- loc[loc$Period == "NMP", ]
 
 ##Cave
-loc_p2_cov <- loc_p2[grepl("\\(cova\\)", loc_p2$Tipus_d_as, ignore.case = TRUE), ]
+loc_p2_cov <- loc_p2[grepl("\\(Cave\\)", loc_p2$Type, ignore.case = TRUE), ]
 
 ##Open-air Funerary and habitat sites
-loc_p2_all <- loc_p2[!grepl("\\(cova\\)", loc_p2$Tipus_d_as, ignore.case = TRUE), ]
-loc_p2_all_f <- loc_p2_all[grepl("Sepultura", loc_p2_all$Tipus_d_as, ignore.case = TRUE), ]
-loc_p2_all_h <- loc_p2_all[grepl("Hàbitat", loc_p2_all$Tipus_d_as, ignore.case = TRUE), ]
+loc_p2_all <- loc_p2[!grepl("\\(Cave\\)", loc_p2$Type, ignore.case = TRUE), ]
+loc_p2_all_f <- loc_p2_all[grepl("Sepulture", loc_p2_all$Type, ignore.case = TRUE), ]
+loc_p2_all_h <- loc_p2_all[grepl("Settlement", loc_p2_all$Type, ignore.case = TRUE), ]
 
 rm(loc_p2_all)
 rm(loc_p2)
