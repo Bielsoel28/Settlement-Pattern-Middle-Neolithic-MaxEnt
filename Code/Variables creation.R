@@ -686,7 +686,7 @@ window(rst) = bb_proj # get just roi
 writeRaster(rst, paste0("Data/Rasters/Soil/RAW/","BD_full_250.tiff"), overwrite = TRUE)
 
 
-# 9.6 Reclasifiyng rasters and creating the index raster =======================
+# 9.6 Reclassifing rasters and creating the index raster =======================
 
 ### Reprojecting and extending each raster to match reference
 raster_files <- list.files("Data/Rasters/Soil/RAW", pattern = "\\.tif[f]?$", full.names = TRUE)
