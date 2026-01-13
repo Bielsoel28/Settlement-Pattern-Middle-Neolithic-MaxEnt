@@ -24,7 +24,7 @@ rm(list=ls())
 
 # Needed packages
 packages <- c("leastcostpath","terra", "sf", "dplyr","tidyr", "doParallel", "viewscape",
-              "ggplot2","spatstat","GA","stars","corrplot","maxnet","blockCV")
+              "ggplot2","spatstat","GA","stars","corrplot","maxnet","blockCV","cli")
 
 #Optional, Run this if the pacakges are not already installed
 for (packages in packages) {
