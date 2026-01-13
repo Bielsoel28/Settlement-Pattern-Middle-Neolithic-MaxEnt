@@ -253,7 +253,15 @@ numeros <- as.numeric(gsub("Data/Rasters/Visibility/RASTERS_PARTS_VC/block_|\\.t
 # Order raster by number 
 llista_rast_parts_sorted <- llista_rast_parts[order(numeros)]
 
-# Read all rasters
+## Read all rasters
+#Function to control the time
+cli_progress_bar(
+  format = "Processing rasters {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
+  total = length(llista_rast_parts_sorted),
+  clear = FALSE
+)
+
+#Main loop
 for(r in seq_along(llista_rast_parts_sorted)) {
   
   r <- r
@@ -419,7 +427,15 @@ numeros <- as.numeric(gsub("Data/Rasters/Visibility/RASTER_PARTS/block_|\\.tif",
 llista_rast_parts_sorted <- llista_rast_parts[order(numeros)]
 
 
-# Read all rasters
+##Read all rasters
+#Function to control the time
+cli_progress_bar(
+  format = "Processing rasters {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
+  total = length(llista_rast_parts_sorted),
+  clear = FALSE
+)
+
+#Main loop
 for(r in seq_along(llista_rast_parts_sorted)) {
   
   r <- r
@@ -479,6 +495,7 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   gc()
   
+  cli_progress_update()
 }
 
 
@@ -856,25 +873,44 @@ rivers_points <- st_sf(geometry = all_points)  #Convert to sf object
 min_cc <- rasterise(cost_raster)
 values(min_cc) <- Inf
 
-#Compute cost for all the point
-for (i in 1:nrow(rivers_points)) {
+##Compute cost for all the point
+#Function to control the time
+cli_progress_bar(
+  format = "Processing river points {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
+  total = nrow(rivers_points),
+  clear = FALSE
+)
+
+#Main loop
+for (i in seq_len(nrow(rivers_points))) {
+  
   # Compute accumulated cost from each origin
-  coords <- st_coordinates(rivers_points[i,])
+  coords <- st_coordinates(rivers_points[i, ])
   
   # Check if point is inside raster extent
-  if (!all(coords[,1] >= xmin(min_cc) & coords[,1] <= xmax(min_cc) &
-           coords[,2] >= ymin(min_cc) & coords[,2] <= ymax(min_cc))) {
-    next  # skip this iteration
+  if (!all(
+    coords[, 1] >= xmin(min_cc) & coords[, 1] <= xmax(min_cc) &
+    coords[, 2] >= ymin(min_cc) & coords[, 2] <= ymax(min_cc)
+  )) {
+    next
   }
   
-  cc <- create_accum_cost(x = cost_raster, origins = rivers_points[i,], FUN = mean, rescale = FALSE)
+  cc <- create_accum_cost(
+    x = cost_raster,
+    origins = rivers_points[i, ],
+    FUN = mean,
+    rescale = FALSE
+  )
   
   # Update min_cc with the minimum value between the existing and the new cc
   min_cc <- min(min_cc, cc, na.rm = TRUE)
   
   rm(cc)
   gc()
+  
+  cli_progress_update()
 }
+
 
 # Replace Inf with NA
 min_cc[values(min_cc) == Inf] <- NA
@@ -914,6 +950,13 @@ min_cc <- rasterise(cost_raster)
 values(min_cc) <- Inf
 
 #Compute cost for all the point
+cli_progress_bar(
+  format = "Processing coast points {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
+  total = nrow(coast_points),
+  clear = FALSE
+)
+
+#Main loop
 for (i in 1:nrow(coast_points)) {
   # Compute accumulated cost from each origin
   coords <- st_coordinates(coast_points[i,])
@@ -931,6 +974,8 @@ for (i in 1:nrow(coast_points)) {
   
   rm(cc)
   gc()
+  
+  cli_progress_update()
 }
 
 # Replace Inf with NA
