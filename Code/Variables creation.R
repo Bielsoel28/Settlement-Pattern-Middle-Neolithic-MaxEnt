@@ -1,5 +1,5 @@
 ##########################################################################
-# This script is Varaible creation for The settlement pattern            #
+# This script is Variable creation for The settlement pattern            #
 # of the Middle Neolithic of the North-eastern part of the Iberian       #   
 # Peninsula: a homogeneous phenomenon?                                   #                                                   
 # Biel Soriano-Elias, Anna Bach G?mez, Miquel Molist Montany?            #                                                   
