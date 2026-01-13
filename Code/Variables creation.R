@@ -581,6 +581,7 @@ gc()
 bb <- ext(rast_cat)
 in_crs <- crs(rast_cat) #CRS of the area of interest
 area_cat <- st_read("Data/Vectors/Buff_27450_mod.shp")
+ref_raster <- rast_cat
 
 dir.create("Data/Rasters/Soil")
 dir.create("Data/Rasters/Soil/RAW")
@@ -609,7 +610,7 @@ window(rst) = NULL # remove any existing window
 window(rst) = bb_proj # get just roi
 
 #Saving the result
-writeRaster(rst, paste0("Rasters/Soil/RAW/","PH_250.tiff"), overwrite = TRUE)
+writeRaster(rst, paste0("Data/Rasters/Soil/RAW/","PH_250.tiff"), overwrite = TRUE)
 
 
 # 9.3 Type of soils data =======================================================
@@ -632,7 +633,7 @@ window(rst) = NULL # remove any existing window
 window(rst) = bb_proj # get just roi
 
 #Saving the result
-writeRaster(rst, paste0("Rasters/Soil/RAW/","Soil_type_250.tiff"), overwrite = TRUE)
+writeRaster(rst, paste0("Data/Rasters/Soil/RAW/","Soil_type_250.tiff"), overwrite = TRUE)
 
 # 9.4 Soil depth (200) data ====================================================
 
@@ -649,7 +650,7 @@ window(rst) = NULL # remove any existing window
 window(rst) = bb_proj # get just roi
 
 #saving the results
-writeRaster(rst, paste0("Rasters/Soil/RAW/","BD_200_250.tiff"), overwrite = TRUE)
+writeRaster(rst, paste0("Data/Rasters/Soil/RAW/","BD_200_250.tiff"), overwrite = TRUE)
 
 # 9.5 Soil depth (total) data ==================================================
 
@@ -666,13 +667,13 @@ window(rst) = NULL # remove any existing window
 window(rst) = bb_proj # get just roi
 
 #Saving the results
-writeRaster(rst, paste0("Rasters/Soil/RAW/","BD_full_250.tiff"), overwrite = TRUE)
+writeRaster(rst, paste0("Data/Rasters/Soil/RAW/","BD_full_250.tiff"), overwrite = TRUE)
 
 
 # 9.6 Reclasifiyng rasters and creating the index raster =======================
 
 ### Reprojecting and extending each raster to match reference
-raster_files <- list.files("Rasters/Soil/RAW", pattern = "\\.tif[f]?$", full.names = TRUE)
+raster_files <- list.files("Data/Rasters/Soil/RAW", pattern = "\\.tif[f]?$", full.names = TRUE)
 raster_list <- lapply(raster_files, rast) 
 
 rast_names <- c("BD_200_100",
@@ -711,7 +712,7 @@ raster_list <- lapply(seq_along(raster_list), function(i) {
   r <- mask(r, ref_raster)
   
   # Save the raster
-  writeRaster(r, filename = file.path("Rasters/Soil", paste0(rast_names[i], ".tiff")), overwrite = TRUE)
+  writeRaster(r, filename = file.path("Data/Rasters/Soil", paste0(rast_names[i], ".tiff")), overwrite = TRUE)
   
   return(r)
   
@@ -719,7 +720,7 @@ raster_list <- lapply(seq_along(raster_list), function(i) {
 
 ### Reclassifying rasters for index construction
 #Loading reprojected rasters
-raster_files <- list.files("Rasters/Soil", pattern = "\\.tif[f]?$", full.names = TRUE)
+raster_files <- list.files("Data/Rasters/Soil", pattern = "\\.tif[f]?$", full.names = TRUE)
 raster_list <- lapply(raster_files, rast) 
 
 ## PH (look up table from Salvador Baiges, 2024 - p. 162 - Blat)
@@ -728,8 +729,8 @@ rast_ph <- raster_list[[3]]
 #Filling the gaps
 filled <- focal(rast_ph, w = matrix(1, 51, 51), fun = mean, na.policy = "only", na.rm = TRUE)
 filled_final <- mask(filled, vect(area_cat))
-writeRaster(filled_final, "Rasters/Soil/PH_filled_100.tiff")
-raster_list[[3]] <- rast("Rasters/Soil/PH_filled_100.tiff")
+writeRaster(filled_final, "Data/Rasters/Soil/PH_filled_100.tiff")
+raster_list[[3]] <- rast("Data/Rasters/Soil/PH_filled_100.tiff")
 
 #Reclassify the raster
 classify_ph <- function(x) {
@@ -744,7 +745,7 @@ classify_ph <- function(x) {
 }
 
 classified_ph <- app(rast_ph, classify_ph)
-writeRaster(classified_ph, "Rasters/Soil/Class/PH_class_100.tiff")
+writeRaster(classified_ph, "Data/Rasters/Soil/Class/PH_class_100.tiff")
 
 ## BD (No full as look up table does not support it - Salvador Baiges, 2024 - p. 163 - Ordi)
 rast_bd_200 <- raster_list[[1]]
@@ -760,7 +761,7 @@ classify_cm <- function(x) {
 }
 
 classified_bd_200 <- app(rast_bd_200, classify_cm)
-writeRaster(classified_bd_200, "Rasters/Soil/Class/BD_200_class_100.tiff")
+writeRaster(classified_bd_200, "Data/Rasters/Soil/Class/BD_200_class_100.tiff")
 
 ## Soil type (look up table from Salvador Baiges, 2024 - p. 164 - Intensiu/Planes al·luvials)
 rast_st <- raster_list[[4]]
@@ -781,7 +782,7 @@ classified_st <- app(rast_st, classify_soil_ref)
 
 #mask values inside the polygon
 classified_st <- mask(classified_st, area_cat)
-writeRaster(classified_st, "Rasters/Soil/Class/Soil_class_100.tiff")
+writeRaster(classified_st, "Data/Rasters/Soil/Class/Soil_class_100.tiff")
 
 ## Slope (look up table from  Salvador Baiges, 2024 - p. 161 - Intensiu/Planes al·luvials)
 rast_slope <- rast("Data/Rasters/12- Slope in degrees.tiff")
@@ -797,11 +798,11 @@ classify_percentage <- function(x) {
 }
 
 classified_slope <- app(rast_slope, classify_percentage)
-writeRaster(classified_slope, "Rasters/Soil/Class/Slope_class_100.tiff")
+writeRaster(classified_slope, "Data/Rasters/Soil/Class/Slope_class_100.tiff")
 
 ### Combining the rasters into one single layer
 #Load the classified rasters in a list
-raster_files <- list.files("Rasters/Soil/Class", pattern = "\\.tif[f]?$", full.names = TRUE)
+raster_files <- list.files("Data/Rasters/Soil/Class", pattern = "\\.tif[f]?$", full.names = TRUE)
 raster_list <- lapply(raster_files, rast) 
 raster_stack <- rast(raster_list)
 
