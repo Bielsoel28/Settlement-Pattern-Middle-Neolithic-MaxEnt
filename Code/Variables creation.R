@@ -577,11 +577,10 @@ gc()
 # 9.1 Extracting reference data of rast_cat ====================================
 
 #Obtaining most of the data from terra package
-
-bb <- ext(rast_cat)
-in_crs <- crs(rast_cat) #CRS of the area of interest
-area_cat <- st_read("Data/Vectors/Buff_27450_mod.shp")
 ref_raster <- rast_cat
+bb <- ext(ref_raster)
+in_crs <- crs(ref_raster) #CRS of the area of interest
+
 
 dir.create("Data/Rasters/Soil")
 dir.create("Data/Rasters/Soil/RAW")
@@ -728,7 +727,7 @@ rast_ph <- raster_list[[3]]
 
 #Filling the gaps
 filled <- focal(rast_ph, w = matrix(1, 51, 51), fun = mean, na.policy = "only", na.rm = TRUE)
-filled_final <- mask(filled, vect(area_cat))
+filled_final <- mask(filled, ref_raster)
 writeRaster(filled_final, "Data/Rasters/Soil/PH_filled_100.tiff")
 raster_list[[3]] <- rast("Data/Rasters/Soil/PH_filled_100.tiff")
 
@@ -781,7 +780,7 @@ classify_soil_ref <- function(x) {
 classified_st <- app(rast_st, classify_soil_ref)
 
 #mask values inside the polygon
-classified_st <- mask(classified_st, area_cat)
+classified_st <- mask(classified_st, ref_raster)
 writeRaster(classified_st, "Data/Rasters/Soil/Class/Soil_class_100.tiff")
 
 ## Slope (look up table from  Salvador Baiges, 2024 - p. 161 - Intensiu/Planes al·luvials)
@@ -882,7 +881,7 @@ min_cc[values(min_cc) == Inf] <- NA
 # Save to file
 writeRaster(min_cc, "Data/Rasters/32- Cost from rivers and lakes", overwrite = TRUE)
 
-rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
 gc()
 
 # 10.3 Cost from coast =========================================================
@@ -938,7 +937,7 @@ min_cc[values(min_cc) == Inf] <- NA
 # Save to file
 writeRaster(min_cc, "Data/Rasters/33- Cost from coast", overwrite = TRUE)
 
-rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
 gc()
 
 # 10.4 Cost from salt ==========================================================
@@ -971,7 +970,6 @@ min_cc[values(min_cc) == Inf] <- NA
 min_cc <- resample(min_cc, rast_cat, method = "bilinear")
 
 #Adapt to final res and ext
-area_cat <- st_read("Data/Vectors/Buff_27450.shp")
 ref_raster <- rast_cat
 ref_extent <- ext(ref_raster)
 ref_crs <- crs(ref_raster)
@@ -994,12 +992,12 @@ if (!all(res(min_cc) == res(ref_raster))) {
 
 
 # Apply mask using the reference raster
-min_cc <- mask(min_cc, area_cat)
+min_cc <- mask(min_cc, rast_cat)
 
 # Save the results
 writeRaster(min_cc, file.path("Data/Rasters", "35- Cost from salt.tif"), overwrite = TRUE)
 
-rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
 gc()
 
 # 10.5 Cost from variscite =====================================================
@@ -1013,8 +1011,7 @@ cc <- create_accum_cost(x = cost_raster, origins = mina, FUN = mean, rescale = F
 cc <- resample(cc, rast_cat, method = "bilinear")
 
 #Adapt to final res and ext
-area_cat <- st_read("Vectors/Buff_27450_mod.shp")
-ref_raster <- rast("Rasters/rast_cat_100_red_mod.tif")
+ref_raster <- rast_cat
 ref_extent <- ext(ref_raster)
 ref_crs <- crs(ref_raster)
 ref_res <- res(ref_raster)
@@ -1035,10 +1032,10 @@ if (!all(res(cc) == res(ref_raster))) {
 }
 
 # Apply mask using the reference raster
-cc <- mask(cc, area_cat)
+cc <- mask(cc, ref_raster)
 
 # Save the results
 writeRaster(cc, file.path("Data/Rasters", "34- Cost from variscita.tif"), overwrite = TRUE)
 
-rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
 gc()
