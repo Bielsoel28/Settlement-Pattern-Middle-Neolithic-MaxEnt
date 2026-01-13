@@ -948,6 +948,12 @@ gc()
 coast <- st_read("Data/Vectors/Rast_cat_coast_line_mod.shp")
 coast <- st_cast(coast, "LINESTRING") #convert to lines
 
+## Update cost raster with values on coast line for right calculations
+cost_raster <- rasterise(cost_raster) #convert back to raster
+cost_raster[is.na(cost_raster)] <- 0.005 #add values to NA
+cost_raster <- mask(cost_raster, aoi) #mask with aoi
+cost_raster <- create_cs(cost_raster, neighbours = 16)
+
 #Sample points every 30 m along each line
 samples <- st_line_sample(coast, density = 1 / 200, type = "regular")  
 
