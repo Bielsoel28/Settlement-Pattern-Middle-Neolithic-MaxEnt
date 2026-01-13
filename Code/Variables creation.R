@@ -832,6 +832,7 @@ cost_raster <- create_slope_cs(r_lr, cost_function =  "tobler", neighbours = 16)
 
 #Load the unified rivers and lakes
 rivers <- st_read("Data/Vectors/Rius_&_llacs.shp")
+rivers <- st_cast(rivers, "LINESTRING") #convert to lines
 
 #Sample points every 30 m along each line
 samples <- st_line_sample(rivers, density = 1 / 200, type = "regular")  
@@ -888,6 +889,7 @@ gc()
 
 #Load the coast 
 coast <- st_read("Data/Vectors/Rast_cat_coast_line_mod.shp")
+coast <- st_cast(coast, "LINESTRING") #convert to lines
 
 #Sample points every 30 m along each line
 samples <- st_line_sample(coast, density = 1 / 200, type = "regular")  
