@@ -913,6 +913,7 @@ for (i in seq_len(nrow(rivers_points))) {
 
 # Replace Inf with NA
 min_cc[values(min_cc) == Inf] <- NA
+min_cc <- resample(min_cc, rast_cat, method = "bilinear")
 
 #Adapt to final res and ext
 ref_raster <- rast_cat
@@ -1000,6 +1001,7 @@ for (i in 1:nrow(coast_points)) {
 
 # Replace Inf with NA
 min_cc[values(min_cc) == Inf] <- NA
+min_cc <- resample(min_cc, rast_cat, method = "bilinear")
 
 #Adapt to final res and ext
 ref_raster <- rast_cat
