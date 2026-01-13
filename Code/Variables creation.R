@@ -911,9 +911,29 @@ for (i in seq_len(nrow(rivers_points))) {
   cli_progress_update()
 }
 
-
 # Replace Inf with NA
 min_cc[values(min_cc) == Inf] <- NA
+
+#Adapt to final res and ext
+ref_raster <- rast_cat
+ref_extent <- ext(ref_raster)
+ref_crs <- crs(ref_raster)
+ref_res <- res(ref_raster)
+
+# Reproject to reference CRS
+if (crs(min_cc) != crs(ref_raster)) {
+  min_cc <- project(min_cc, ref_raster, method = "bilinear")  # continuous
+}
+
+# Extend to reference extent
+if (!all(ext(min_cc) == ext(ref_raster))) {
+  min_cc <- extend(min_cc, ext(ref_raster))
+}
+
+# Match resolution
+if (!all(res(min_cc) == res(ref_raster))) {
+  min_cc <- resample(min_cc, ref_raster, method = "bilinear")
+}
 
 # Save to file
 writeRaster(min_cc, "Data/Rasters/32- Cost from rivers and lakes", overwrite = TRUE)
@@ -981,6 +1001,27 @@ for (i in 1:nrow(coast_points)) {
 # Replace Inf with NA
 min_cc[values(min_cc) == Inf] <- NA
 
+#Adapt to final res and ext
+ref_raster <- rast_cat
+ref_extent <- ext(ref_raster)
+ref_crs <- crs(ref_raster)
+ref_res <- res(ref_raster)
+
+# Reproject to reference CRS
+if (crs(min_cc) != crs(ref_raster)) {
+  min_cc <- project(min_cc, ref_raster, method = "bilinear")  # continuous
+}
+
+# Extend to reference extent
+if (!all(ext(min_cc) == ext(ref_raster))) {
+  min_cc <- extend(min_cc, ext(ref_raster))
+}
+
+# Match resolution
+if (!all(res(min_cc) == res(ref_raster))) {
+  min_cc <- resample(min_cc, ref_raster, method = "bilinear")
+}
+
 # Save to file
 writeRaster(min_cc, "Data/Rasters/33- Cost from coast", overwrite = TRUE)
 
@@ -1037,10 +1078,6 @@ if (!all(res(min_cc) == res(ref_raster))) {
   min_cc <- resample(min_cc, ref_raster, method = "bilinear")
 }
 
-
-# Apply mask using the reference raster
-min_cc <- mask(min_cc, rast_cat)
-
 # Save the results
 writeRaster(min_cc, file.path("Data/Rasters", "35- Cost from salt.tif"), overwrite = TRUE)
 
@@ -1077,9 +1114,6 @@ if (!all(ext(cc) == ext(ref_raster))) {
 if (!all(res(cc) == res(ref_raster))) {
   cc <- resample(cc, ref_raster, method = "bilinear")
 }
-
-# Apply mask using the reference raster
-cc <- mask(cc, ref_raster)
 
 # Save the results
 writeRaster(cc, file.path("Data/Rasters", "34- Cost from variscita.tif"), overwrite = TRUE)
