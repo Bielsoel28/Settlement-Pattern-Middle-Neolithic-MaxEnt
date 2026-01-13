@@ -137,7 +137,7 @@ msrm <- function(r, fmin = 5, fmax = 100, x = 1.6, outdir = tempdir()) {
 }  
 
 ## Compute MSRM
-msrm_result <- msrm(r_planar, fmin = 300, fmax = 3000, x = 1) #change according to needs, f in meters
+msrm_result <- msrm(rast_cat, fmin = 300, fmax = 3000, x = 1) #change according to needs, f in meters
 
 # Save to file
 writeRaster(msrm_result, "Data/Rasters/14- MSRM.tiff", overwrite = TRUE)
