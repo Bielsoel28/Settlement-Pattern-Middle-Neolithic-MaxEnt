@@ -937,7 +937,7 @@ if (!all(res(min_cc) == res(ref_raster))) {
 }
 
 # Save to file
-writeRaster(min_cc, "Data/Rasters/32- Cost from rivers and lakes", overwrite = TRUE)
+writeRaster(min_cc, "Data/Rasters/32- Cost from rivers and lakes.tif", overwrite = TRUE)
 
 rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
 gc()
@@ -1025,7 +1025,7 @@ if (!all(res(min_cc) == res(ref_raster))) {
 }
 
 # Save to file
-writeRaster(min_cc, "Data/Rasters/33- Cost from coast", overwrite = TRUE)
+writeRaster(min_cc, "Data/Rasters/33- Cost from coast.tif", overwrite = TRUE)
 
 rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
 gc()
