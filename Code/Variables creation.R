@@ -159,7 +159,7 @@ northing_raster <- cos(aspect_radians)
 
 #Save the results to files
 writeRaster(easting_raster, "Data/Rasters/16- Easting.tiff")
-writeRaster(northing_raster, "Rasters/15- Northing.tif")
+writeRaster(northing_raster, "Data/Rasters/15- Northing.tif")
 
 # 6 Path Visibility  ###########################################################
 
@@ -325,7 +325,7 @@ rast_list_norm <- sprc(rast_list_norm)
 # Build the mosaic
 mosaic_rast <- mosaic(rast_list_norm, fun = mean)
 
-writeRaster(mosaic_rast, filename = "Data/Rasters/ 22- Path Visibility (Top 10%).tif") #saving of the raster of viewshed
+writeRaster(mosaic_rast, filename = "Data/Rasters/22- Path Visibility (Top 10%).tif") #saving of the raster of viewshed
 
 
 
@@ -482,13 +482,13 @@ rast_list <- sprc(rast_list)
 mosaic_rast <- mosaic(rast_list, fun = mean)
 
 #Save the results
-writeRaster(mosaic_rast, filename = "23- Visibility Index.tif") 
+writeRaster(mosaic_rast, filename = "Data/Rasters/23- Visibility Index.tif") 
 
 
 # 8 Visual Prominence Index ####################################################
 
 #Loading total viewshed raster
-total_view <- rast("Rasters/Rasters_final/23- Visibility Index.tiff")
+total_view <- rast("Data/Rasters/23- Visibility Index.tiff")
 
 #Settign up MSRM function
 msrm <- function(r, fmin = 5, fmax = 100, x = 1.6, outdir = tempdir()) {
@@ -554,7 +554,7 @@ max_value_2 <- minmax(visual_prominance_msrm)[2]
 visual_normalized <- (visual_prominance_msrm - min_value_2) / (max_value_2 - min_value_2)
 
 #Save the results
-writeRaster(visual_normalized, filename = "23- Visibility Index.tif") 
+writeRaster(visual_normalized, filename = "Data/Rasters/25- Visual Prominance index 3000 (MSRM).tif") 
 
 # 9 Agricultural suitability  ##################################################
 
