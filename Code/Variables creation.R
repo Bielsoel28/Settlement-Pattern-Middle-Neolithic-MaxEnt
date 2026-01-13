@@ -64,11 +64,11 @@ flow_dir <- terrain(rast_cat, v = "flowdir")
 flow_acc <- flowAccumulation(flow_dir)
 
 # Flow accumulation (number of cells)
-cell_area <- prod(res(r))
+cell_area <- prod(res(rast_cat))
 flow_acc_area <- flow_acc * cell_area
 
 # Slope in radians
-slope_rad <- terrain(r, v = "slope", unit = "radians")
+slope_rad <- terrain(rast_cat, v = "slope", unit = "radians")
 
 # Compute TWI
 twi <- log((flow_acc_area + 1) / tan(slope_rad))
