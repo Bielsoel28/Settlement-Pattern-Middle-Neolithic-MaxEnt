@@ -55,6 +55,9 @@ pendent <- terrain(rast_cat, v="slope", unit="degrees", neighbors= 8)
 # Save to file
 writeRaster(pendent, "Data/Rasters/12- Slope in degrees.tiff", overwrite = TRUE)
 
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
+
 # 3 Topographic Wetness Index (TWI) ############################################
 
 # Compute flow direction
@@ -142,6 +145,9 @@ msrm_result <- msrm(rast_cat, fmin = 300, fmax = 3000, x = 1) #change according 
 # Save to file
 writeRaster(msrm_result, "Data/Rasters/14- MSRM.tiff", overwrite = TRUE)
 
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
+
 # 5 Northing and Easting  ######################################################
 
 #Compute aspect
@@ -160,6 +166,9 @@ northing_raster <- cos(aspect_radians)
 #Save the results to files
 writeRaster(easting_raster, "Data/Rasters/16- Easting.tiff")
 writeRaster(northing_raster, "Data/Rasters/15- Northing.tif")
+
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
 
 # 6 Path Visibility  ###########################################################
 
@@ -327,7 +336,8 @@ mosaic_rast <- mosaic(rast_list_norm, fun = mean)
 
 writeRaster(mosaic_rast, filename = "Data/Rasters/22- Path Visibility (Top 10%).tif") #saving of the raster of viewshed
 
-
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
 
 # 7 Visibility Index  ##########################################################
 
@@ -484,6 +494,8 @@ mosaic_rast <- mosaic(rast_list, fun = mean)
 #Save the results
 writeRaster(mosaic_rast, filename = "Data/Rasters/23- Visibility Index.tif") 
 
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
 
 # 8 Visual Prominence Index ####################################################
 
@@ -555,6 +567,9 @@ visual_normalized <- (visual_prominance_msrm - min_value_2) / (max_value_2 - min
 
 #Save the results
 writeRaster(visual_normalized, filename = "Data/Rasters/25- Visual Prominance index 3000 (MSRM).tif") 
+
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
 
 # 9 Agricultural suitability  ##################################################
 
@@ -801,6 +816,9 @@ normalized_raster <- (sum_raster - min_val) / (max_val - min_val)
 #Save the resutls
 writeRaster(normalized_raster, "Data/Rasters/31- Agri suitability.tif", overwrite = TRUE)
 
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
+
 # 10 Cost from rivers, coast, salt and variscite ###############################
 
 # 10.1 Aggregate DEM ===========================================================
@@ -915,7 +933,7 @@ min_cc[values(min_cc) == Inf] <- NA
 # Save to file
 writeRaster(min_cc, "Data/Rasters/33- Cost from coast", overwrite = TRUE)
 
-# 10.4 Salt ====================================================================
+# 10.4 Cost from salt ==========================================================
 
 #Load points
 cambrils <- c(X=367020.9,Y=4665977.1) #Salí de cambrils
@@ -974,7 +992,7 @@ min_cc <- mask(min_cc, area_cat)
 writeRaster(min_cc, file.path("Data/Rasters", "35- Cost from salt.tif"), overwrite = TRUE)
 
 
-# 10.5 Mine of variscite =======================================================
+# 10.5 Cost from variscite =====================================================
 
 #Load point
 general <- st_read("Conjunts/general/general.shp")
