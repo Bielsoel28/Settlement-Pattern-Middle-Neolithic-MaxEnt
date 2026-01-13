@@ -882,6 +882,9 @@ min_cc[values(min_cc) == Inf] <- NA
 # Save to file
 writeRaster(min_cc, "Data/Rasters/32- Cost from rivers and lakes", overwrite = TRUE)
 
+rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+gc()
+
 # 10.3 Cost from coast =========================================================
 
 #Load the coast 
@@ -934,6 +937,9 @@ min_cc[values(min_cc) == Inf] <- NA
 
 # Save to file
 writeRaster(min_cc, "Data/Rasters/33- Cost from coast", overwrite = TRUE)
+
+rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+gc()
 
 # 10.4 Cost from salt ==========================================================
 
@@ -993,6 +999,8 @@ min_cc <- mask(min_cc, area_cat)
 # Save the results
 writeRaster(min_cc, file.path("Data/Rasters", "35- Cost from salt.tif"), overwrite = TRUE)
 
+rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+gc()
 
 # 10.5 Cost from variscite =====================================================
 
@@ -1031,3 +1039,6 @@ cc <- mask(cc, area_cat)
 
 # Save the results
 writeRaster(cc, file.path("Data/Rasters", "34- Cost from variscita.tif"), overwrite = TRUE)
+
+rm(list=setdiff(ls(), c("rast_cat", "aoi","cost_raster","r_lr")))
+gc()
