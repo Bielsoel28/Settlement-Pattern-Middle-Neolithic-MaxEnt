@@ -140,7 +140,7 @@ msrm <- function(r, fmin = 5, fmax = 100, x = 1.6, outdir = tempdir()) {
 }  
 
 ## Compute MSRM
-msrm_result <- msrm(rast_cat, fmin = 300, fmax = 3000, x = 1) #change according to needs, f in meters
+msrm_result <- msrm(rast_cat, fmin = 300, fmax = 3000, x = 1)
 
 # Save to file
 writeRaster(msrm_result, "Data/Rasters/14- MSRM.tiff", overwrite = TRUE)
@@ -180,6 +180,7 @@ z <- rast("Data/Rasters/21- Path frequency.tiff")
 elevacio <- rast_cat
 
 #Set up storing folders
+dir.create("Data/Rasters/Visibility")
 dir.create("Data/Rasters/Visibility/RASTERS_PARTS_VC")
 dir.create("Data/Rasters/Visibility/RASTERS_VC")
 
@@ -276,12 +277,12 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   rm(polygons_ras_fil)
   rm(buff_3000)
   
-  punts_r <- st_intersection(punts, polygons_ras_fil_sf)
+  punts_r <- st_intersection(y, polygons_ras_fil_sf)
   
   rm(polygons_ras_fil_sf)
   
   viewshed <- compute_viewshed(elevacio_r_3000, punts_r, r = 3000, parallel = TRUE)
-  rast_r_3000 <- crop(camins, elevacio_r_3000)
+  rast_r_3000 <- crop(z, elevacio_r_3000)
   rast_r_3000 <- resample(rast_r_3000, elevacio_r_3000)
   
   rm(elevacio_r_3000)
