@@ -203,7 +203,7 @@ write.csv(normality_results_df, paste0("Results/Variables_cor","Normality.csv"))
 sample_pred_cor <- cor(sample_pred, method = "pearson")
 
 #Ploting and saving the result
-tiff(file.path("Results/Variables_cor","Correlation_plot_pearson_red_mod_final.tiff"), width = 9*300, height = 6*300, res = 300) # Width and height in pixels
+tiff(file.path("Results/Variables_cor","Correlation_plot_pearson.tiff"), width = 9*300, height = 6*300, res = 300) # Width and height in pixels
 corrplot.mixed(sample_pred_cor,lower.col = "black", number.cex = 0.35, tl.pos="lt", tl.cex= 0.4, cl.cex = 0.4)
 dev.off()
 
