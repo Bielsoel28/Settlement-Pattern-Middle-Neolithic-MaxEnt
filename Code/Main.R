@@ -328,7 +328,7 @@ dev.off()
 st_write(sample_bg_ag, file.path("Results/Variables_cor","all_bg_points.shp"))
 st_write(sample_bg_ag_sampled, file.path("Results/Variables_cor","selected_bg_points.shp"))
 
-rm(list=setdiff(ls(),c("list_punts","rast_cat","predictors_final","sample","sample_bg_ag_sampled")))
+rm(list=setdiff(ls(),c("list_punts","predictors_final","sample","sample_bg_ag_sampled")))
 
 gc()
 
@@ -340,6 +340,9 @@ gc()
 tiff(file.path("Results/Variables_cor","Spatial_blocks_red_mod_final.tiff"), width = 12*300, height = 8*300, res = 300) # Width and height in pixels
 sac <- cv_spatial_autocor(predictors_final) 
 dev.off()
+
+#Load DEM for plotting
+rast_cat <- rast("Data/Rasters/11- Height.tiff")
 
 # 4.2 Functions for MaxEnt loop setting up =====================================
 
