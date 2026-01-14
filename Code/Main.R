@@ -328,7 +328,7 @@ dev.off()
 st_write(sample_bg_ag, file.path("Results/Variables_cor","all_bg_points.shp"))
 st_write(sample_bg_ag_sampled, file.path("Results/Variables_cor","selected_bg_points.shp"))
 
-rm(rm(list=ls()))
+rm(list=ls())
 
 gc()
 
