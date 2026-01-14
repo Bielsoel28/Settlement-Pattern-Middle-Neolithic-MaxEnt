@@ -340,8 +340,12 @@ rast_list <- lapply(llista_rast, terra::rast)
 rast_list_norm <- lapply(rast_list, terra::rast)
 rast_list_norm <- sprc(rast_list_norm)
 
-# Build the mosaic
+# Build the mosaic (may have to be done in smaller parts for proper working)
 mosaic_rast <- mosaic(rast_list_norm, fun = mean)
+
+#Fill gaps and mask
+mosaic_rast <- focal(mosaic_rast, w = matrix(1, 51, 51), fun = mean, na.policy = "only", na.rm = TRUE)
+mosaic_rast <- mask(mosaic_rast, elevacio)
 
 writeRaster(mosaic_rast, filename = "Data/Rasters/22- Path Visibility (Top 10%).tif") #saving of the raster of viewshed
 
@@ -349,6 +353,8 @@ rm(list=setdiff(ls(), c("rast_cat")))
 gc()
 
 # 7 Visibility Index  ##########################################################
+
+### Caution, computationally expensive ###
 
 #Load the necessary data
 punts <- st_read("Data/Vectors/rast_cat_100_points.shp")
@@ -508,6 +514,10 @@ rast_list <- sprc(rast_list)
 
 # Build the mosaic (may have to be done in smaller parts for proper working)
 mosaic_rast <- mosaic(rast_list, fun = mean)
+
+#Fill gaps and mask
+mosaic_rast <- focal(mosaic_rast, w = matrix(1, 51, 51), fun = mean, na.policy = "only", na.rm = TRUE)
+mosaic_rast <- mask(mosaic_rast, elevacio)
 
 #Save the results
 writeRaster(mosaic_rast, filename = "Data/Rasters/23- Visibility Index.tif") 
@@ -838,6 +848,8 @@ rm(list=setdiff(ls(), c("rast_cat")))
 gc()
 
 # 10 Cost from rivers, coast, salt and variscite ###############################
+
+### Caution, computationally expensive ###
 
 # 10.1 Aggregate DEM ===========================================================
 
