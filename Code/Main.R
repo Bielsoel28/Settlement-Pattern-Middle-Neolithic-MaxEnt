@@ -328,36 +328,20 @@ dev.off()
 st_write(sample_bg_ag, file.path("Results/Variables_cor","all_bg_points.shp"))
 st_write(sample_bg_ag_sampled, file.path("Results/Variables_cor","selected_bg_points.shp"))
 
-rm(list=ls())
+rm(list=setdiff(ls(),c("list_punts","rast_cat","predictors_final","sample","sample_bg_ag_sampled")))
 
 gc()
 
 
 # 4 MaxEnt modelling ###########################################################
-# 4.1 Setting up data again ====================================================
 
-## Load already computed background points points 
-sample_bg_ag_sampled <- st_read("Results/Variables_cor/selected_bg_points.shp")
-
-### Load predictors again
-#Loading rasters
-raster_files <- list.files("Data/Rasters", pattern = "\\.tif[f]?$", full.names = TRUE)
-raster_list <- lapply(raster_files, rast) 
-predictors <- rast(raster_list)
-names(predictors) <- tools::file_path_sans_ext(basename(raster_files))
-
-#Filtering out correlated variables
-predictors_final <- predictors[[-c(2,11)]]
-
-#Loading DEM apart for ploting
-rast_cat <- rast("Data/Rasters/11- Height.tiff")
-
-# 4.2 Cross-folds validation blocks creation ===================================
+# 4.1 Cross-folds validation blocks creation ===================================
 
 tiff(file.path("Results/Variables_cor","Spatial_blocks_red_mod_final.tiff"), width = 12*300, height = 8*300, res = 300) # Width and height in pixels
 sac <- cv_spatial_autocor(predictors_final) 
 dev.off()
-# 4.3 Functions for MaxEnt loop setting up =====================================
+
+# 4.2 Functions for MaxEnt loop setting up =====================================
 
 #Function to compute variable importance (%)
 plot_variable_importance <- function(model, original_vars, output_file, k, training_data) {
@@ -531,7 +515,7 @@ extract_responses_exact <- function(mod, data_train, n_points = 200, id = NULL, 
   dplyr::bind_rows(results)
 }
 
-# 4.4 Loop for MaxEnt paralle computing ========================================
+# 4.3 Loop for MaxEnt paralle computing ========================================
 
 ## Data frames to store AUC results and Var importance (%)
 auc_df <- data.frame(
