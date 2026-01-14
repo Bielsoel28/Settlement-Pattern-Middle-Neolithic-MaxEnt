@@ -519,19 +519,19 @@ extract_responses_exact <- function(mod, data_train, n_points = 200, id = NULL, 
 
 ## Data frames to store AUC results and Var importance (%)
 auc_df <- data.frame(
-  AUC_1 = numeric(length(names_list_punts)),
-  AUC_2 = numeric(length(names_list_punts)),
-  AUC_3 = numeric(length(names_list_punts)),
-  AUC_4 = numeric(length(names_list_punts)),
-  AUC_5 = numeric(length(names_list_punts)),
-  row.names = names_list_punts
+  AUC_1 = numeric(length(list_punts)),
+  AUC_2 = numeric(length(list_punts)),
+  AUC_3 = numeric(length(list_punts)),
+  AUC_4 = numeric(length(list_punts)),
+  AUC_5 = numeric(length(list_punts)),
+  row.names = names(list_punts)
 )
 
 var_df <- data.frame(
-  Var_1 = numeric(length(names_list_punts)),
-  Var_2 = numeric(length(names_list_punts)),
-  Var_3 = numeric(length(names_list_punts)),
-  row.names = names_list_punts
+  Var_1 = numeric(length(list_punts)),
+  Var_2 = numeric(length(list_punts)),
+  Var_3 = numeric(length(list_punts)),
+  row.names = names(list_punts)
 )
 
 ## Save predictors final for parallel correct functioning
