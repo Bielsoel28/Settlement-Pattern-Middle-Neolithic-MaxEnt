@@ -143,7 +143,7 @@ msrm <- function(r, fmin = 5, fmax = 100, x = 1.6, outdir = tempdir()) {
 msrm_result <- msrm(rast_cat, fmin = 300, fmax = 3000, x = 1)
 
 # Save to file
-writeRaster(msrm_result, "Data/Rasters/14- MSRM.tiff", overwrite = TRUE)
+writeRaster(msrm_result, "Data/Rasters/14- MSRM 3000.tiff", overwrite = TRUE)
 
 rm(list=setdiff(ls(), c("rast_cat")))
 gc()
