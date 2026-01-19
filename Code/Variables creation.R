@@ -1138,5 +1138,43 @@ if (!all(res(cc) == res(ref_raster))) {
 # Save the results
 writeRaster(cc, file.path("Data/Rasters", "34- Cost from variscita.tif"), overwrite = TRUE)
 
-rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
+rm(list=ls())
 gc()
+
+# 11 Unify extents and overwrite files #########################################
+
+##Load aoi rasters
+raster_files <- list.files("Data/Rasters", pattern = "\\.tif[f]?$", full.names = TRUE)
+raster_list <- lapply(raster_files, rast)
+
+##Unify extents
+ref_raster <- raster_list[[1]]
+
+#Function to unify extents
+raster_list <- lapply(seq_along(raster_list), function(i) {
+  
+  r <- raster_list[[i]]
+  
+  # Reproject to reference CRS
+  if (crs(r) != crs(ref_raster)) {
+    r <- project(r, ref_raster, method = "bilinear") 
+  }
+  
+  
+  # Extend to reference extent
+  if (!all(ext(r) == ext(ref_raster))) {
+    r <- extend(r, ext(ref_raster))
+  }
+  
+  # Match resolution
+  if (!all(res(r) == res(ref_raster))) {
+    r <- resample(r, ref_raster, method = "bilinear")
+  }
+  
+  # Apply mask using the reference raster
+  r <- mask(r, ref_raster)
+  
+  # Save the raster
+  writeRaster(r, filename = file.path("Data/Rasters", basename(raster_files)[i]), overwrite = TRUE)
+  
+})
