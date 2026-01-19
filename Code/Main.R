@@ -160,7 +160,7 @@ predictors <- rast(raster_list)
 #Assign names
 names(predictors) <- tools::file_path_sans_ext(basename(raster_files))
 
-### Extracting values of the varaibles
+### Extracting values of the variables
 #Loading mesh of background points
 sample <- st_read("Data/Vectors/fishnet_rast_cat_100_red_points_v3.shp")
 #Extracting values
