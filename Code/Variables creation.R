@@ -256,7 +256,7 @@ llista_rast_parts_sorted <- llista_rast_parts[order(numeros)]
 ## Read all rasters
 #Function to control the time
 cli_progress_bar(
-  format = "Processing rasters {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
+  format = "Processing rasters {.val {r}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
   total = length(llista_rast_parts_sorted),
   clear = FALSE
 )
@@ -436,7 +436,7 @@ llista_rast_parts_sorted <- llista_rast_parts[order(numeros)]
 ##Read all rasters
 #Function to control the time
 cli_progress_bar(
-  format = "Processing rasters {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
+  format = "Processing rasters {.val {r}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
   total = length(llista_rast_parts_sorted),
   clear = FALSE
 )
