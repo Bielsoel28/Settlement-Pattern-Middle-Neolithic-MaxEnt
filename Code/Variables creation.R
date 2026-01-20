@@ -584,7 +584,7 @@ msrm <- function(r, fmin = 5, fmax = 100, x = 1.6, outdir = tempdir()) {
   return(msrm)
 }
 
-## Visual prominence (difference of a cell in regard neighbors in total viewshed values) with MSRM (Orengo i Petrie, 2018) 
+## Visual prominence (difference of a cell in regard neighbors in total viewshed values) with MSRM (Orengo & Petrie, 2018) 
 visual_prominance_msrm <-  msrm(total_view, fmin = 300, fmax = 3000, x = 1) 
 
 # Normalize the raster to the range [0, 1]
