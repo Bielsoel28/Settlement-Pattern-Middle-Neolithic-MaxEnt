@@ -212,7 +212,7 @@ dev.off()
 predictors_final <- predictors[[-c(2,11)]]
 sample_values <- sample_pred[,-c(2,11)]
 
-rm(list=setdiff(ls(),c("list_punts","predictors_final","sample")))
+rm(list=setdiff(ls(),c("list_punts","predictors_final","sample","sample_values")))
 
 gc()
 
