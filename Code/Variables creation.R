@@ -327,6 +327,8 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   gc()
   
+  cli_progress_update()
+  
 }
 
 
