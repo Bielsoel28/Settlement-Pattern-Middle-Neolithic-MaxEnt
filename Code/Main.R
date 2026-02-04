@@ -348,45 +348,69 @@ dev.off()
 #Load DEM for plotting
 rast_cat <- rast("Data/Rasters/11- Height.tiff")
 
-# 4.2 Functions for MaxEnt loop setting up =====================================
+# 4.2 Functions for MaxEnt evaluation =====================================
 
 #Function to compute Jackknife test
-jackknife_test <- function(occ, env_data) {
-
-  vars <- colnames(env_data)
+jackknife_test <- function(results_list, 
+                           response_col = "presence", 
+                           type = "cloglog") {
+  # Initialize list for fold-wise jackknife
+  jack_list <- lapply(results_list, function(res) {
+    if(!res$skipped) {
+      model <- res$MaxEnt_model
+      data  <- res$train_data
+      
+      vars <- colnames(data)
+      vars <- vars[vars != response_col]
+      
+      y_true <- data[[response_col]]
+      
+      # Compute AUC with each variable alone and without each variable
+      fold_res <- lapply(vars, function(v) {
+        # Model with only this variable
+        formula_only <- as.formula(paste(response_col, "~", v))
+        model_only <- maxnet(p = y_true, data = data[, vars], f = formula_only)
+        pred_only <- predict(model_only, data[, vars], type = type)
+        auc_only <- as.numeric(pROC::auc(y_true, pred_only))
+        
+        # Model without this variable
+        vars_minus_v <- setdiff(vars, v)
+        formula_minus <- as.formula(paste(response_col, "~", paste(vars_minus_v, collapse = " + ")))
+        model_minus <- maxnet(p = y_true, data = data[, vars], f = formula_minus)
+        pred_minus <- predict(model_minus, data[, vars], type = type)
+        auc_without <- as.numeric(pROC::auc(y_true, pred_minus))
+        
+        data.frame(variable = v,
+                   auc_only = auc_only,
+                   auc_without = auc_without,
+                   fold = res$k)
+      })
+      
+      do.call(rbind, fold_res)
+      
+    } else {
+      NULL
+    }
+  })
   
-  # Fit full model
-  full_model <- maxnet(p = occ, data = env_data, f = maxnet.formula(p = occ, data = env_data))
+  # Bind all folds
+  jack_all <- dplyr::bind_rows(jack_list)
   
-  # Initialize
-  auc_only <- numeric(length(vars))
-  auc_without <- numeric(length(vars))
-  names(auc_only) <- vars
-  names(auc_without) <- vars
+  # Aggregate across folds
+  jack_summary <- jack_all %>%
+    group_by(variable) %>%
+    summarise(mean_auc_only    = mean(auc_only),
+              mean_auc_without = mean(auc_without),
+              sd_only          = sd(auc_only),
+              sd_without       = sd(auc_without),
+              n_folds          = n(),
+              .groups = "drop") %>%
+    arrange(desc(mean_auc_only)) %>%
+    mutate(rank = row_number())
   
-  # Loop through variables
-  for (v in vars) {
-    # Model with only this variable
-    formula_only <- as.formula(paste("p ~", v))
-    model_only <- maxnet(p = occ, data = env_data, f = formula_only)
-    auc_only[v] <- maxnet::maxnet.auc(model_only, occ, env_data)
-    
-    # Model without this variable
-    vars_minus_v <- setdiff(vars, v)
-    formula_minus <- as.formula(paste("p ~", paste(vars_minus_v, collapse = " + ")))
-    model_minus <- maxnet(p = occ, data = env_data, f = formula_minus)
-    auc_without[v] <- maxnet::maxnet.auc(model_minus, occ, env_data)
-  }
-  
-  # Create results data.frame
-  result <- data.frame(
-    variable = vars,
-    auc_only = auc_only,
-    auc_without = auc_without
-  )
-  
-  return(result)
+  return(list(jack_foldwise = jack_all, jack_summary = jack_summary))
 }
+
 
 #Function to compute permutation
 permutation_importance <- function(results_list, 
@@ -450,7 +474,11 @@ permutation_importance <- function(results_list,
 }
 
 #Function to extract responses for plotting
-extract_responses <- function(mod, data_train, n_points = 500, id = NULL, sample_n = NULL) {
+extract_responses <- function(mod, 
+                              data_train, 
+                              n_points = 500, 
+                              id = NULL, 
+                              sample_n = NULL) {
   vars <- names(data_train)
   results <- list()
   
@@ -507,7 +535,7 @@ extract_responses <- function(mod, data_train, n_points = 500, id = NULL, sample
   dplyr::bind_rows(results)
 }
 
-# 4.3 Loop for MaxEnt paralle computing ========================================
+# 4.3 MaxEnt parallel computing ========================================
 
 ## Save predictors final for parallel correct functioning
 pred_file_raster <- file.path("Results/Variables_cor", "predictors_final.tif")
@@ -703,6 +731,7 @@ for (i in names(list_punts)){
       auc = auc_ME,
       MaxEnt_model = MaxEnt_model,
       train_data = data,
+      test_data = data_test,
       p = p,
       skipped = FALSE
     )
@@ -733,6 +762,7 @@ auc_df <- data.frame(
   row.names = names(list_punts)
 )
 
+##Loop to run over all models
 for (i in names(list_punts)){ 
   
 ##Set folder where to retrieve models
@@ -750,7 +780,7 @@ mean_pred_rast <- mean(pred_maps_rast, na.rm = TRUE)
 #Save the results
 writeRaster(mean_pred_rast, file.path(out_dir,paste0("pred_map_total.tiff")), overwrite=TRUE)
 
-##Response curves
+##Response curves for all folds
 #Extract values
 all_resp <- bind_rows(
   lapply(seq_along(results), function(k) {
@@ -777,8 +807,8 @@ ggsave(filename = file.path(out_dir, "Response_Curves.tiff"),
        plot = p,
        width = 12, height = 8, dpi = 300)
 
-##Permutation computation
-perm_results <- permutation_importance_results_list(results)
+##Permutation computation for all folds
+perm_results <- permutation_importance(results)
 
 #Plot result
 perm_results$perm_summary <- perm_results$perm_summary %>%
@@ -806,12 +836,15 @@ ggsave(file.path(out_dir,"Permutation_Importance.png"), plot = p2,  width = 12, 
 #save the data
 write.csv(perm_results$perm_summary, file = file.path(out_dir,"Permutation_Importance.csv"), )
 
-##Jackknife test
+##Jackknife test for all folds
 # occ: vector of 1 (presence) and 0 (background)
 # env_data: data.frame or matrix of environmental variables (same rows as occ)
-jackknife_results <- jackknife_test(results[["p"]], results[["data"]])
+jackknife_results <- jackknife_test(results)
 
 #Plot the results
+df <- jack_results$jack_summary %>%
+  mutate(variable = factor(variable, levels = variable))
+
 p3 <- ggplot(df, aes(x=variable)) +
   geom_bar(aes(y=only), stat="identity", fill="blue", alpha=0.6) +
   geom_bar(aes(y=without), stat="identity", fill="red", alpha=0.6) +
@@ -821,6 +854,9 @@ p3 <- ggplot(df, aes(x=variable)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggsave(file.path(out_dir,"Jackknife.png"), plot = p,  width = 12, height = 8, dpi = 300)
+
+#save the data
+write.csv(jackknife_results, file = file.path(out_dir,"Jackknife.csv"), )
 
 ##Storing parallel loop results
 #AUC
