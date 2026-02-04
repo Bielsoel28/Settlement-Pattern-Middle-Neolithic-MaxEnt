@@ -99,7 +99,7 @@ pred_list <- list()
 
 # Load the grpahs
 for (f in seq_along(folders)) {
-  file_pred <- file.path(folders[[f]], "MaxEnt", "Combined_Response_Curves_All_Variables.tiff")
+  file_pred <- file.path(folders[[f]], "MaxEnt", "Response_Curves.tiff")
   if (!file.exists(file_pred)) next
   img <- image_read(file_pred)
   if (!is.null(img)) {

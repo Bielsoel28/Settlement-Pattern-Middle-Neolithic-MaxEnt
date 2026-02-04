@@ -831,7 +831,7 @@ p2 <- ggplot(perm_results$perm_summary, aes(x = variable, y = mean_perm)) +
     axis.text.y = element_text(size = 12)
   )
 
-ggsave(file.path(out_dir,"Permutation_Importance.png"), plot = p2,  width = 12, height = 8, dpi = 300)
+ggsave(file.path(out_dir,"Permutation_Importance.tiff"), plot = p2,  width = 12, height = 8, dpi = 300)
 
 #save the data
 write.csv(perm_results$perm_summary, file = file.path(out_dir,"Permutation_Importance.csv"), )
