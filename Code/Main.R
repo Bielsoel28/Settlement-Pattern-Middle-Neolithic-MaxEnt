@@ -23,8 +23,9 @@ rm(list=ls())
 # 0.2 Install packages =========================================================
 
 # Needed packages
-packages <- c("leastcostpath","terra", "sf", "dplyr","tidyr", "doParallel", "viewscape",
-              "ggplot2","spatstat","GA","stars","corrplot","maxnet","blockCV","nortest")
+packages <- c("terra", "sf", "dplyr","tidyr",
+              "ggplot2","corrplot","SDMtune","blockCV",
+              "nortest","rJava")
 
 #Optional, Run this if the pacakges are not already installed
 for (packages in packages) {
@@ -341,213 +342,21 @@ gc()
 
 # 4.1 Cross-folds validation blocks creation ===================================
 
-tiff(file.path("Results/Variables_cor","Spatial_blocks.tiff"), width = 12*300, height = 8*300, res = 300) # Width and height in pixels
+tiff(file.path("Results/Variables_cor","Spatial_blocks_red_mod_final.tiff"), width = 12*300, height = 8*300, res = 300) # Width and height in pixels
 sac <- cv_spatial_autocor(predictors_final) 
 dev.off()
 
 #Load DEM for plotting
 rast_cat <- rast("Data/Rasters/11- Height.tiff")
 
-# 4.2 Functions for MaxEnt loop setting up =====================================
-
-#Function to compute variable importance (%)
-variable_importance <- function(model, original_vars, output_file, k, training_data) {
-  
-  var_vector <- apply(training_data[original_vars], 2, var, na.rm = TRUE)
-  coefs <- model$betas
-  coef_df <- data.frame(
-    feature = names(coefs),
-    coefficient = abs(as.numeric(coefs)),
-    stringsAsFactors = FALSE
-  )
-  
-  get_variables <- function(feature_name) {
-    parts <- strsplit(feature_name, ":")[[1]]
-    vars <- gsub(".*\\(([^()]+)\\).*", "\\1", parts)
-    vars <- ifelse(grepl("\\(", parts), vars, parts)
-    vars <- gsub("\\^\\d+", "", vars)
-    return(vars)
-  }
-  
-  contrib_list <- lapply(1:nrow(coef_df), function(i) {
-    feature <- coef_df$feature[i]
-    coef_val <- coef_df$coefficient[i]
-    vars <- get_variables(feature)
-    vars <- vars[vars %in% original_vars]
-    if(length(vars) == 0) return(NULL)
-    
-    weights <- var_vector[vars]
-    if(any(is.na(weights)) || sum(weights)==0) return(NULL)
-    
-    weights <- weights / sum(weights)
-    contribs <- coef_val * weights
-    data.frame(variable = vars, contribution = contribs, stringsAsFactors = FALSE)
-  })
-  
-  contrib_df <- bind_rows(contrib_list) %>%
-    group_by(variable) %>%
-    summarise(total_contribution = sum(contribution, na.rm=TRUE), .groups="drop") %>%
-    arrange(desc(total_contribution)) %>%
-    mutate(percentage = 100 * total_contribution / sum(total_contribution, na.rm=TRUE))
-  
-  # Plot
-  p <- ggplot(contrib_df, aes(x = reorder(variable, percentage), y = percentage)) +
-    geom_bar(stat="identity", fill="black") +
-    coord_flip() +
-    labs(title = paste("MaxEnt Variable Importance - Fold", k),
-         x="Variable", y="Total Contribution (%)") +
-    theme_minimal()
-  
-  ggsave(filename = output_file, plot=p, width=8, height=5, dpi=300)
-  
-  return(contrib_df)
-}
-
-#Function to compute permutation
-permutation_importance <- function(results_list, response_col = "presence", type = "cloglog", n_perm = 30, metric = c("correlation","auc")) {
-  metric <- match.arg(metric)
-  
-  # Initialize list
-  perm_list <- lapply(results_list, function(res) {
-    if(!res$skipped) {
-      model <- res$MaxEnt_model
-      data  <- res$train_data
-      
-      vars <- colnames(data)
-      vars <- vars[vars != response_col]
-      
-      # Predict original
-      pred_orig <- predict(model, data[, vars], type = type)
-      y_true <- data[[response_col]]
-      
-      # Compute permutation importance
-      fold_res <- lapply(vars, function(v) {
-        perm_scores <- numeric(n_perm)
-        for(i in 1:n_perm) {
-          data_perm <- data
-          data_perm[[v]] <- sample(data_perm[[v]])
-          pred_perm <- predict(model, data_perm[, vars], type = type)
-          perm_scores[i] <- switch(metric,
-                                   correlation = 1 - cor(pred_orig, pred_perm, use = "complete.obs"),
-                                   auc = as.numeric(pROC::auc(y_true, pred_orig)) - as.numeric(pROC::auc(y_true, pred_perm))
-          )
-        }
-        data.frame(variable = v,
-                   perm_importance = mean(perm_scores),
-                   sd = sd(perm_scores),
-                   fold = res$k)
-      })
-      
-      do.call(rbind, fold_res)
-    } else {
-      NULL
-    }
-  })
-  
-  # Bind all folds
-  perm_all <- dplyr::bind_rows(perm_list)
-  
-  # Aggregate across folds
-  perm_summary <- perm_all %>%
-    group_by(variable) %>%
-    summarise(mean_perm = mean(perm_importance),
-              sd_perm   = mean(sd),
-              n_folds   = n(),
-              .groups = "drop") %>%
-    arrange(desc(mean_perm)) %>%
-    mutate(rank = row_number())
-  
-  return(list(perm_foldwise = perm_all, perm_summary = perm_summary))
-}
-
-#Function to extract responses for plotting
-extract_responses <- function(mod, data_train, n_points = 200, id = NULL, sample_n = NULL) {
-  vars <- names(data_train)
-  results <- list()
-  
-  # Optionally sample rows for averaging
-  if(!is.null(sample_n) && sample_n < nrow(data_train)) {
-    set.seed(42)  # for reproducibility
-    data_train <- data_train[sample(nrow(data_train), sample_n), , drop = FALSE]
-  }
-  
-  for(v in vars) {
-    # Determine sequence of values for this variable
-    if(is.numeric(data_train[[v]])) {
-      x_seq <- seq(min(data_train[[v]], na.rm = TRUE),
-                   max(data_train[[v]], na.rm = TRUE),
-                   length.out = n_points)
-    } else {
-      x_seq <- sort(unique(data_train[[v]]))
-    }
-    
-    # Numeric variable: predict in batches
-    if(is.numeric(data_train[[v]])) {
-      tmp_list <- lapply(x_seq, function(xval) {
-        tmp <- data_train
-        tmp[[v]] <- xval
-        tmp
-      })
-      tmp_all <- do.call(rbind, tmp_list)
-      
-      pred_all <- predict(mod, newdata = tmp_all, type = "cloglog", clamp = TRUE)
-      n_rows <- nrow(data_train)
-      y <- colMeans(matrix(pred_all, nrow = n_rows))
-      
-    } else {
-      # Factor variable: loop over levels (usually fast)
-      y <- sapply(x_seq, function(xval) {
-        tmp <- data_train
-        tmp[[v]] <- xval
-        mean(predict(mod, newdata = tmp, type = "cloglog", clamp = TRUE))
-      })
-    }
-    
-    # Build output
-    df <- data.frame(
-      variable = v,
-      x = x_seq,
-      y = y,
-      stringsAsFactors = FALSE
-    )
-    
-    if(!is.null(id)) df$id <- id
-    results[[v]] <- df
-  }
-  
-  dplyr::bind_rows(results)
-}
-
-# 4.3 Loop for MaxEnt parallel computing =======================================
-
-## Data frames to store AUC results and Var importance (%)
-auc_df <- data.frame(
-  AUC_1 = numeric(length(list_punts)),
-  AUC_2 = numeric(length(list_punts)),
-  AUC_3 = numeric(length(list_punts)),
-  AUC_4 = numeric(length(list_punts)),
-  AUC_5 = numeric(length(list_punts)),
-  row.names = names(list_punts)
-)
-
-var_df <- data.frame(
-  Var_1 = numeric(length(list_punts)),
-  Var_2 = numeric(length(list_punts)),
-  Var_3 = numeric(length(list_punts)),
-  row.names = names(list_punts)
-)
-
-## Save predictors final for parallel correct functioning
-pred_file_raster <- file.path("Results/Variables_cor", "predictors_final.tif")
-writeRaster(predictors_final, pred_file_raster, overwrite=TRUE)
+# 4.2 MaxEnt computing =========================================================
 
 ## Loop for sites subsets
 for (i in names(list_punts)){ 
   
   #Folder creation for storing results
-  out_dir <- file.path("Results/",i,"MaxEnt")
+  out_dir <- file.path("Results",i,"MaxEnt")
   dir.create(out_dir) #General folder
-  dir.create(file.path(out_dir, "Pred_maps")) #Prediction maps
   
   #Extracting loc values
   loc <- list_punts[[i]]
@@ -617,259 +426,146 @@ for (i in names(list_punts)){
   ggsave(filename = file.path(out_dir, "Spatial_blocks_points_mde.tiff"),
          plot = gg2, width = 8, height = 6, dpi = 300, units = "in")
   
-  
-  ## Extract the folds in Spatial Block object created in the previous section
-  folds <- kfolds$folds_list
-  
-  ## Parallel loop set up
-  ncores <- length(kfolds$folds_list)
-  clus <- makeCluster(ncores)
-  
-  #Load packages inside workers
-  clusterEvalQ(clus, {
-    library(terra)
-    library(ggplot2)
-    library(plotROC)
-    library(GA)
-    library(maxnet)
-    library(dplyr)
-    library(tidyr)
-  })
-  
-  #Export only simple objects
-  to_export <- c("folds", "all_data", "sample_values", "out_dir", "variable_importance")
-  clusterExport(clus, varlist = to_export)
-  
-  #Workers function set up
-  worker_kfold <- function(k) {
+  ## Creating a SWD object with data
+  data_swd <- new("SWD",
+                  species = i,
+                  coords  = as.data.frame(st_coordinates(all_data$geometry)),
+                  data    = all_data[, 1:ncol(sample_values)],
+                  pa      = as.numeric(all_data$Id))  
     
-    fold_dir <- file.path(out_dir, as.character(k))
-    dir.create(fold_dir, recursive = TRUE, showWarnings = FALSE)
-    dir.create(file.path(out_dir, "Pred_maps"), recursive = TRUE, showWarnings = FALSE)
-    
-    predictors_final <- rast(file.path("Results/Variables_cor", "predictors_final.tif"))
-    
-    #Train/test split
-    trainSet <- unlist(folds[[k]][1])
-    testSet  <- unlist(folds[[k]][2])
-    
-    p <- all_data$Id[trainSet]
-    data <- all_data[trainSet, 1:ncol(sample_values)]
-    data_test <- all_data[testSet, ]
     
     #GA optimization
-    GA_MaxEnt <- ga(
-      type = "real-valued",
-      fitness = function(params) {
-        
-        regmult <- params[1]
-        fc_index <- max(1, min(round(params[2]), 5))
-        fc_comb <- paste(c("l","q","h","p","t")[1:fc_index], collapse="")
-        
-        # Fit model
-        form <- maxnet.formula(p, data, classes = fc_comb)
-        mod <- maxnet(p, data, form, regmult=regmult, addsamplestobackground=TRUE)
-        
-        # serialize
-        mod <- unserialize(serialize(mod, NULL))
-        
-        # AUC on held-out test partition
-        preds <- predict(mod, data_test, type="cloglog")
-        auc_ME <- as.numeric(pROC::auc(response=data_test$Id, predictor=as.numeric(preds)))
-        
-        if(is.na(auc_ME)) return(-9999)
-        
-        # Return AUC directly
-        return(auc_ME)
-      },
-      lower = c(0.5,1),
-      upper = c(5.0,5),
-      popSize = 20,
-      pmutation = 0.4,
-      pcrossover = 0.6,
-      maxiter = 5,
-      elitism = 2,
-      seed = 123
+    first_model <- train("Maxent", 
+                         data = data_swd,
+                         folds = kfolds,
+                         progress = TRUE)
+    
+    h <- list(fc = c("l", "lq", "lh", "lqp", "lqph", "lqpht"),
+              reg = seq(0.2, 5, 0.2),
+              iter = c(500,1000,2000))
+    
+    
+    genetic <- optimizeModel(first_model, 
+                             hypers = h, 
+                             metric = "auc", 
+                             pop = 20, 
+                             gen = 5,
+                             keep_best = 0.4,
+                             keep_random = 0.2,
+                             mutation_chance = 0.4,
+                             interactive = FALSE,
+                             progress = TRUE)
+    
+    best_id <- which.max(genetic@results$test_AUC)
+    best_fc   <- genetic@results$fc[best_id]
+    best_reg  <- genetic@results$reg[best_id]
+    best_iter <- genetic@results$iter[best_id]
+    
+    MaxEnt_model <- train(
+      "Maxent",
+      data  = data_swd,
+      fc    = best_fc,
+      reg   = best_reg,
+      iter  = best_iter,
+      folds = kfolds,
+      progress = TRUE
     )
-    
-    best_params <- GA_MaxEnt@solution
-    best_regmult <- best_params[1]
-    best_fc_num <- max(1, min(round(best_params[2]), 5))
-    best_fc <- paste(c("l","q","h","p","t")[1:best_fc_num], collapse="")
-    
-    # Train final MaxEnt model
-    MaxEnt_model <- maxnet(p, data, maxnet.formula(p, data, classes=best_fc),
-                           regmult=best_regmult, addsamplestobackground=TRUE)
-    
-    if(length(MaxEnt_model$betas)==0) return(list(k=k, skipped=TRUE))
-    
-# 4.3.1 In loop model evaluation ===============================================
-    
-    # Predict on test set (AUC)
-    data_test$pred <- predict(MaxEnt_model, data_test, type="cloglog")
-    auc_ME <- as.numeric(pROC::auc(response=data_test$Id, predictor=data_test$pred))
-    
-    # Prediction map creation
-    pred_map <- predict(predictors_final, MaxEnt_model, clamp=FALSE, type="cloglog", na.rm=TRUE)
-    pred_file <- file.path(out_dir, "Pred_maps", sprintf("pred_map_k%d.tif", k))
-    writeRaster(pred_map, pred_file, overwrite=TRUE)
-    
-    # Variable contribution (%)
-    vc_file <- file.path(fold_dir, sprintf("Var_contribution_k%d.tif", k))
-    contrib_df <- variable_importance(MaxEnt_model, colnames(data), vc_file, k, data)
-    
-    # Response curves 
-    resp_file <- file.path(fold_dir, sprintf("var_response_k%d.tif", k))
-    tiff(resp_file, width=6*300, height=8*300, res=300)
-    plot(MaxEnt_model, vars=names(MaxEnt_model$samplemeans), common.scale=TRUE, type="cloglog", ylab="Prediction")
-    dev.off()
-    
-    # AUC plot
-    auc_file <- file.path(fold_dir, sprintf("AUC_k%d.tif", k))
-    ggROC <- ggplot(data_test, aes(m=as.numeric(pred), d=Id)) + geom_roc(n.cuts=0, color='red') + theme_bw()
-    tiff(auc_file, width=6*300, height=4*300, res=300)
-    print(ggROC + ggtitle(paste("AUC =", round(auc_ME,4))))
-    dev.off()
     
     # Return results 
-    list(
-      k = k,
-      auc = auc_ME,
-      pred = pred_file,
-      vc = vc_file,
-      contrib = contrib_df,
+    results <- list(
       MaxEnt_model = MaxEnt_model,
-      train_data = data,
-      skipped = FALSE
+      train_data = data_swd,
+      kfolds = kfolds
     )
-    
-  }
   
-  ## Collecting Parallel loop results
-  results <- parLapplyLB(clus, 1:length(folds), worker_kfold)
-  
-  # Finishing parallel loop
-  stopCluster(clus) 
-  
-  #Save the models
   save(results, file = file.path(out_dir,paste0("MaxEnt_models.Rdata")))
-  
-# 4.3.2 Final evaluation of models =============================================
-  
-  ## Creation of mean Prediction map for all folds
-  pred_maps_list <-  list.files(file.path(out_dir,"Pred_maps"), pattern = "\\.tif[f]?$", full.names = TRUE)
-  pred_maps_rast <- lapply(pred_maps_list, rast) 
-  pred_maps_rast <-  do.call(c, pred_maps_rast)
-  mean_pred_rast <- mean(pred_maps_rast, na.rm = TRUE)
-  
-  #Save the results
-  writeRaster(mean_pred_rast, file.path(out_dir,paste0("pred_map_total.tiff")), overwrite=TRUE)
-  
-  
-  ##Creating summed response curves
-  #Extract response curves
-  all_resp <- bind_rows(
-    lapply(seq_along(results), function(k) {
-      res <- results[[k]]
-      mod <- res$MaxEnt_model
-      data_train <- res$train_data  
-      extract_responses(mod, data_train, id=k, sample_n = 500)
-    })
-  )
-
-  #Plot the results
-  p <- ggplot() +
-    geom_line(data=all_resp, aes(x=x, y=y, group=id, color=factor(id)), alpha=0.7) +
-    facet_wrap(~variable, scales="free_x") +
-    theme_bw(base_size=14) +
-    labs(
-      y = "Prediction (cloglog)",
-      x = "Variable value",
-      color = "Fold"
-    ) +
-    theme(legend.position="bottom")
-  
-  ggsave(filename = file.path(out_dir, "Response_Variables.tiff"),
-         plot = p,
-         width = 12, height = 8, dpi = 300)
-  
-  
-  ##Permutation computation
-  perm_results <- permutation_importance(results, 
-                                         response_col = "presence", 
-                                         type = "cloglog",
-                                         n_perm = 30,
-                                         metric = "correlation")
-  
-  #Plot result
-  perm_results$perm_summary <- perm_results$perm_summary %>%
-    arrange(desc(mean_perm)) %>%
-    mutate(variable = factor(variable, levels = variable))
-  
-  p2 <- ggplot(perm_results$perm_summary, aes(x = variable, y = mean_perm)) +
-    geom_col(fill = "steelblue") +
-    geom_errorbar(aes(ymin = mean_perm - sd_perm, ymax = mean_perm + sd_perm),
-                  width = 0.3, color = "black") +
-    coord_flip() +  # horizontal bars
-    theme_bw(base_size = 14) +
-    labs(
-      title = "Permutation Importance of Predictors",
-      x = "Variable",
-      y = "Mean Permutation Importance (± SD)"
-    ) +
-    theme(
-      axis.text.x = element_text(angle = 0, hjust = 1),
-      axis.text.y = element_text(size = 12)
-    )
-  
-  ggsave(file.path(out_dir,"Permutation_Importance.tiff"), plot = p2,  width = 12, height = 8, dpi = 300)
-  
-  #save the data
-  write.csv(perm_results$perm_summary, file = file.path(out_dir,"Permutation.csv"), )
-  
-  
-  ##AUC
-  auc_values <- sapply(results[1:length(folds)], function(x) if(x$skipped) NA else x$auc)
-  auc_df[i, ] <- c(auc_values, rep(NA, ncol(auc_df) - length(auc_values)))
-  
-  
-  ##Variables importance (%)
-  percent_list <- lapply(results, function(x) {
-    if (x$skipped) return(NULL)
-    setNames(x$contrib$percentage, x$contrib$variable)
-  }) #Get percent values of each fold and extract named vectors of percentage
-
-  all_vars <- unique(unlist(lapply(percent_list, names)))  #combine by variable name
-
-  percent_df <- data.frame(
-    variable = all_vars,
-    do.call(cbind, lapply(percent_list, function(v) v[all_vars])),
-    row.names = all_vars
-  )   #Build data frame
-  
-  colnames(percent_df)[-1] <- paste0("Fold_", seq_along(percent_list))
-  percent_df[is.na(percent_df)] <- 0   # replace NAs with 0
-  percent_df$Mean_contribution <- rowMeans(percent_df[, -1])   #Compute mean per variable
-  
-  p_total <- ggplot(percent_df, aes(x = reorder(variable, Mean_contribution), y = Mean_contribution)) +
-    geom_bar(stat = "identity", fill = "black") +
-    coord_flip() +
-    labs(
-      title = "MaxEnt Variable Importance",
-      x = "Variable",
-      y = "Total Contribution (%)"
-    ) +
-    theme_minimal()  # Create the plot
-  
-  ggsave(filename = file.path(out_dir,paste0("Contribution_Importance.tiff")),
-         plot = p_total, width = 8, height = 5, dpi = 300)   # Save the plot
-  
-  write.csv(percent_df, file = file.path(out_dir,"Contribution.csv"))   #save the data
   
 }
 
-## Compute summary results
-auc_df$Mean_AUC <- rowMeans(auc_df[, 1:5], na.rm = TRUE)
+rm(list=setdiff(ls(),c("list_punts","predictors_final")))
 
-#Save results
-write.csv(auc_df, file = "Results/results_MaxEnt.csv", row.names = TRUE)
+gc()
+
+# 4.3 Model evaluation =========================================================
+
+auc_df <- data.frame(
+  AUC = numeric(length(names(list_punts))),
+  row.names = names(list_punts)
+)
+
+# Load the functions
+source("./Code/Auxiliar/plotROC_kfold.R")
+source("./Code/Auxiliar/modelReportCV.R")
+
+##Loop to run over all models
+for (i in names(list_punts)){ 
+  
+##Set folder where to retrieve models
+out_dir <- file.path("Results",i,"MaxEnt")
+
+#Load the models
+load(file.path(out_dir,paste0("MaxEnt_models.Rdata")))
+
+##AUC 
+auc_df[i,] <- SDMtune::auc(results$MaxEnt_model, test = TRUE)
+
+## Response curves
+modelReportCV(model = results$MaxEnt_model,
+              folder = file.path(out_dir,"Response"),
+              type = "cloglog",
+              response_curves = TRUE,
+              only_presence = FALSE,
+              permut = 10,
+              verbose = TRUE)
+
+##Variable importance
+var <- varImp(results$MaxEnt_model, permut = 10, progress = FALSE)
+
+#Plot the data
+var_plot <- plotVarImp(var, color = "#abd9e9")
+ggsave(file.path(out_dir,paste0("Variable importance.tiff")), var_plot, width = 6, height = 8)
+
+#save the data
+write.csv(var, file = file.path(out_dir,"Permutation_Importance.csv"))
+
+##Jackknife test
+jk <- doJk(results$MaxEnt_model,
+           metric = "auc",
+           with_only = TRUE,
+           progress = FALSE)
+
+#Plot the data
+jK <- plotJk(jk, type = c("train"))
+
+ggsave(file.path(out_dir,paste0("Jackknife_test.tiff")), jK, width = 6, height = 8)
+
+#Save the data
+write.csv(jk, file = file.path(out_dir,"Jackknife_test.csv"))
+
+##Prediction map creation
+names(predictors_final) <- names(results$MaxEnt_model@data@data)
+
+#Pred map from every folds
+pred_list <- lapply(
+  results$MaxEnt_model@models,
+  function(m) {
+    terra::predict(
+      predictors_final,
+      m,
+      clamp = FALSE,
+      type = "cloglog",
+      na.rm = TRUE
+    )
+  }
+)
+
+#Mean of all folds
+pred_stack <- rast(pred_list)
+mean_pred_map <- app(pred_stack, mean, na.rm = TRUE)
+
+writeRaster(mean_pred_map, file.path(out_dir, "pred_map.tiff"), overwrite = TRUE)
+
+}
+
+write.csv(auc_df, file = "Results/AUC_ME.csv", row.names = TRUE)
+

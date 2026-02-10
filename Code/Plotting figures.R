@@ -23,8 +23,7 @@ rm(list=ls())
 # 0.2 Install packages =========================================================
 
 # Needed packages
-packages <- c("leastcostpath","terra", "sf", "dplyr","tidyr", "doParallel", "viewscape",
-              "ggplot2","spatstat","GA","stars","corrplot","maxnet","blockCV")
+packages <- c("terra", "sf", "dplyr","tidyr","ggplot2","magick","grid","gridExtra","pdftools","gtable")
 
 #Optional, Run this if the pacakges are not already installed
 for (packages in packages) {
@@ -68,11 +67,63 @@ dev.off()
 
 # 2 Plotting figure 5 ##########################################################
 
-# Load extra packages
-library(magick)
-library(grid)
-library(gridExtra)
+## Collect each subset plots
+path <- "Results"
+folders <- list.dirs(path, recursive = FALSE, full.names = TRUE)
+folders <- folders[!grepl("^v", basename(folders), ignore.case = TRUE)]
 
+for (f in folders) {
+  
+  pred_list <- list()
+  
+  response_dir <- file.path(f, "MaxEnt", "Response","plots")
+  
+  # List all PNG files
+  png_files <- list.files(response_dir, pattern = "\\.png$", full.names = TRUE)
+  
+  # Remove files containing "roc" (case-insensitive)
+  png_files <- png_files[!grepl("ROC", basename(png_files), ignore.case = TRUE)]
+  
+  # Read each PNG file
+  for (file_pred in png_files) {
+    img <- image_read(file_pred)
+    pred_list[[length(pred_list) + 1]] <- as.raster(image_convert(img, format = "rgba"))
+  }
+  
+  # Convert to grobs
+  grobs <- lapply(pred_list, rasterGrob, interpolate=TRUE)
+  
+  # Layout: 4 x 4
+  n <- length(grobs)
+  nrow_grid <- 4
+  ncol_grid <- 4
+  
+  # If fewer images than grid spaces, fill with NULLs
+  layout_matrix <- matrix(
+    1:(nrow_grid * ncol_grid),
+    nrow = nrow_grid,
+    ncol = ncol_grid,
+    byrow = TRUE
+  )
+  
+  # Save final composed figure
+  tiff(file.path(f, "MaxEnt","Response_curves.tiff"),
+       width = 15*300,
+       height = 14*300,
+       res = 300,
+       bg = "white")
+  
+  grid.arrange(
+    grobs = grobs,
+    layout_matrix = layout_matrix
+  )
+  
+  
+  dev.off()
+  
+}
+
+## Create the final figure
 # Select folders and files 
 path <- "Results"
 
@@ -97,9 +148,9 @@ clean_titles <- c(
 #Create an empty object for loading the graphs
 pred_list <- list()
 
-# Load the grpahs
+# Load the graphs
 for (f in seq_along(folders)) {
-  file_pred <- file.path(folders[[f]], "MaxEnt", "Response_Curves.tiff")
+  file_pred <- file.path(folders[[f]], "MaxEnt", "Response_curves.tiff")
   if (!file.exists(file_pred)) next
   img <- image_read(file_pred)
   if (!is.null(img)) {
@@ -138,10 +189,14 @@ pushViewport(viewport(layout=grid.layout(nrow(layout_matrix), ncol(layout_matrix
 for (i in seq_along(grobs)) {
   row_col <- which(layout_matrix == i, arr.ind = TRUE)
   if (i == 1) next
-  grid.text(clean_titles[i],
-            vp = viewport(layout.pos.row=row_col[1], layout.pos.col=row_col[2]),
-            y = unit(1, "npc") - unit(2, "lines"),
-            gp=gpar(fontsize=14,fontface="bold"))
+  grid.text(
+    clean_titles[i],
+    vp = viewport(layout.pos.row = row_col[1],
+                  layout.pos.col = row_col[2]),
+    y = unit(0.95, "npc") + unit(0.5, "lines"),
+    just = "bottom",
+    gp = gpar(fontsize = 14, fontface = "bold")
+  )
 }
 
 dev.off()
@@ -164,10 +219,10 @@ for (f in seq_along(folders)) {
   
   folder <- folders[[f]]
   folder_path <- file.path(folder, "MaxEnt")
-  file_pred <- file.path(folder_path, "pred_map_total.tiff")
+  file_pred <- file.path(folder_path, "pred_map.tiff")
   
   if (!file.exists(file_pred)) {
-    message("Skipping ", folder, ": pred_map_total.tiff not found.")
+    message("Skipping ", folder, ": pred_map.tiff not found.")
     next
   }
   
@@ -190,7 +245,7 @@ clean_titles <- c("General","P1 Open-air funerary sites", "P1 Open-air settlemme
                   "P2 Open-air funerary sites", "P2 Open-air settlemment sites", "P2 Cave sites")
 
 tiff(
-  file.path("Figure response.tiff"),
+  file.path("Figure pred maps.tiff"),
   width  = 9 * 300,
   height = 15 * 300,
   res    = 300
@@ -267,12 +322,6 @@ dev.off()
 
 # 4 Plotting figure 7 and supplementary 6 ######################################
 
-#Load extra packages
-library(grid)
-library(gridExtra)
-library(pdftools)
-library(magick)
-
 # Select folders and files 
 path <- "Results"
 
@@ -282,61 +331,66 @@ folders <- list.dirs(path, recursive = FALSE, full.names = TRUE)
 # Filter only those whose names start with "v"
 folders <- folders[!grepl("^v", basename(folders), ignore.case = TRUE)]
 
-# PDF filenames relative to folder
-pdf_names <- c(
-  "K_base.pdf",
-  "Kres_pred_map.pdf",
-  "KPPM_Ca.pdf",
-  "KPPM_Ma.pdf",
-  "KPPM_Th.pdf"
+# Titles
+clean_titles <- c(
+  "General",
+  "P1 Open-air funerary sites",
+  "P1 Open-air settlemment sites",
+  "P1 Cave sites",
+  "P2 Open-air funerary sites",
+  "P2 Open-air settlemment sites",
+  "P2 Cave sites"
 )
 
-## Loop to go over all folders
-for (folder in folders) {
-  
-  folder_path <- file.path(folder, "MaxEnt")
-  
-  pdf_grobs <- list()
-  for (pdf_name in pdf_names) {
-    pdf_file <- file.path(folder_path, pdf_name)
-    if (!file.exists(pdf_file)) next
-    
-    img <- image_read_pdf(pdf_file, density = 300)
-    img <- img[1]  # first page
-    
-    r <- as.raster(image_convert(img, format = "rgba"))
-    pdf_grobs[[length(pdf_grobs)+1]] <- rasterGrob(r, interpolate = TRUE)
+## Load images
+#Create an empty object for loading the graphs
+pred_list <- list()
+
+# Load the graphs
+for (f in seq_along(folders)) {
+  file_pred <- file.path(folders[[f]], "MaxEnt", "Spatial_blocks_points_mde.tiff")
+  if (!file.exists(file_pred)) next
+  img <- image_read(file_pred)
+  if (!is.null(img)) {
+    pred_list[[length(pred_list)+1]] <- as.raster(image_convert(img, format = "rgba"))
   }
-  
-  if (length(pdf_grobs) == 0) next
-  
-  num_pdfs <- length(pdf_grobs)
-  
-  # Determine layout: 2 columns per row
-  n_col <- 2
-  n_row <- ceiling(num_pdfs / n_col)
-  
-  layout_matrix <- matrix(seq_len(n_row * n_col), nrow = n_row, ncol = n_col, byrow = TRUE)
-  
-  # Replace empty slots with NA if num_pdfs < n_row * n_col
-  layout_matrix[layout_matrix > num_pdfs] <- NA
-  
-  # Output TIFF
-  out_file <- file.path(folder_path, "Combined_PPM.tiff")
-  
-  tiff(
-    out_file,
-    width = 8*300,
-    height = 12*300,
-    res = 300,
-    bg = "white"
-  )
-  
-  grid.arrange(
-    grobs = pdf_grobs,
-    layout_matrix = layout_matrix
-  )
-  
-  dev.off()
-  message("Saved combined PDFs for folder: ", folder)
 }
+
+# Convert to grobs
+grobs <- lapply(pred_list, rasterGrob, interpolate=TRUE)
+
+# Layout: 1 big top + 2-column bottom
+n <- length(grobs)
+bottom_indices <- if (n > 1) 2:n else c()
+layout_matrix <- rbind(
+  c(1,1),
+  if(length(bottom_indices) > 0) matrix(bottom_indices, ncol = 2, byrow = FALSE)
+)
+
+# Plot the graphs
+tiff(
+  "Figure_Spatial_blocks.tiff",
+  width = 18*300,
+  height = 30*300,
+  res = 300,
+  bg = "white"
+)
+
+grid.arrange(
+  grobs = grobs,
+  layout_matrix = layout_matrix,
+  top = textGrob(clean_titles[1], gp=gpar(fontsize=16,fontface="bold"))
+)
+
+# Add titles for small plots manually
+pushViewport(viewport(layout=grid.layout(nrow(layout_matrix), ncol(layout_matrix))))
+for (i in seq_along(grobs)) {
+  row_col <- which(layout_matrix == i, arr.ind = TRUE)
+  if (i == 1) next
+  grid.text(clean_titles[i],
+            vp = viewport(layout.pos.row=row_col[1], layout.pos.col=row_col[2]),
+            y = unit(1, "npc") - unit(2, "lines"),
+            gp=gpar(fontsize=14,fontface="bold"))
+}
+
+dev.off()

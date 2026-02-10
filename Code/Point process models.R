@@ -23,8 +23,8 @@ rm(list=ls())
 # 0.2 Install packages =========================================================
 
 # Needed packages
-packages <- c("leastcostpath","terra", "sf", "dplyr","tidyr", "doParallel", "viewscape",
-              "ggplot2","spatstat","GA","stars","corrplot","maxnet","blockCV")
+packages <- c("terra", "sf", "dplyr","tidyr", "doParallel",
+              "ggplot2","spatstat","stars")
 
 #Optional, Run this if the pacakges are not already installed
 for (packages in packages) {
@@ -123,15 +123,15 @@ for(f in 1:length(folders)) {
   folder_path <- file.path(folder,"MaxEnt")
   
   #Load the rasters
-  file_pred   <- file.path(folder_path, "pred_map_total.tiff")
+  file_pred   <- file.path(folder_path, "pred_map.tiff")
   
   if (!file.exists(file_pred)) {
-    message("Skipping ", folder, ": pred_map_total.tiff not found.")
+    message("Skipping ", folder, ": pred_map.tiff not found.")
     next
   }
   
   #Convert raster to im
-  raster_pred <- rast(file.path(folder_path, "pred_map_total.tiff"))
+  raster_pred <- rast(file.path(folder_path, "pred_map.tiff"))
   pred_im <- lapply(raster_pred, as.im.SpatRaster1) 
   names(pred_im) <- "Prediction_map"
   
@@ -260,15 +260,15 @@ for (model in c("Th", "Ma", "Ca")) {
     folder_path <- file.path(folder,"MaxEnt")
     
     #Load the rasters
-    file_pred   <- file.path(folder_path, "pred_map_total.tiff")
+    file_pred   <- file.path(folder_path, "pred_map.tiff")
     
     if (!file.exists(file_pred)) {
-      message("Skipping ", folder, ": pred_map_total.tiff not found.")
+      message("Skipping ", folder, ": pred_map.tiff not found.")
       next
     }
     
     #Convert raster to im
-    raster_pred <- rast(file.path(folder_path, "pred_map_total.tiff"))
+    raster_pred <- rast(file.path(folder_path, "pred_map.tiff"))
     pred_im <- lapply(raster_pred, as.im.SpatRaster1) 
     names(pred_im) <- "Prediction_map"
     
