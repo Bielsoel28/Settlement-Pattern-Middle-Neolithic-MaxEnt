@@ -20,6 +20,10 @@ The repository folder is structured as follows:
   - **Plotting figures**: Code (R script) to plot Fig. 2, Fig.5, Fig. 6, Fig. 7 and Supplementay 6 figures.
   - **Point Process models**: Code (R script) to perform and fitt all PPMs of the analysis
   - **Variables creation**: Code (R script) to create all the varaibles used in the nalysis, not nescessary to run as they all are provided.
+  - **Auxiliars/**: Contains auxiliar scripts for functions used in R scripts for the paper
+    - **modelReportCV**: Code (R script) to create reports of MaxEnt models
+    - **modelReportCV.html**: Template for MaxEnt model report
+    - **plotROC_kfold**: Code (R script) to plot AUC graphics for MaxEnt models
 - **Data/**: Data used in the paper, all in the CRS ETRS89 / UTM 31 N.  
   - **Rasters/**: All the nescessary rasters for the paper
     - **11- Height**: Resampled version (100 x 100 meters) of the original 25 x 25 meter Digital Elevation Model (DEM) raster supplied by GLO-30 Copernicus 
@@ -65,22 +69,16 @@ All analyses and code development were conducted on:
 R version 4.5.2 (2025-10-31 ucrt)
 
 attached base packages:
-[1] parallel  stats     graphics  grDevices utils     datasets  methods   base     
+[1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
- [1] blockCV_3.1-5          maxnet_0.1.4           corrplot_0.95          stars_0.6-8            abind_1.4-8            GA_3.2.4              
- [7] spatstat_3.3-3         spatstat.linnet_3.2-6  spatstat.model_3.3-6   rpart_4.1.24           spatstat.explore_3.4-3 nlme_3.1-168          
-[13] spatstat.random_3.4-1  spatstat.geom_3.4-1    spatstat.univar_3.1-3  spatstat.data_3.1-6    ggplot2_3.5.2          viewscape_2.0.2       
-[19] doParallel_1.0.17      iterators_1.0.14       foreach_1.5.2          tidyr_1.3.1            dplyr_1.1.4            sf_1.0-21             
-[25] terra_1.8-54           leastcostpath_2.0.12  
+ [1] rJava_1.0-11  nortest_1.0-4 blockCV_3.1-5 SDMtune_1.3.2 corrplot_0.95 ggplot2_3.5.2 tidyr_1.3.1   dplyr_1.1.4  
+ [9] sf_1.0-21     terra_1.8-54 
 
 loaded via a namespace (and not attached):
- [1] gtable_0.3.6          xfun_0.52             spatstat.sparse_3.1-0 lattice_0.22-7        vctrs_0.6.5           tools_4.5.2          
- [7] spatstat.utils_3.1-4  generics_0.1.4        goftest_1.2-3         tibble_3.2.1          proxy_0.4-27          pbmcapply_1.5.1      
-[13] pkgconfig_2.0.3       Matrix_1.7-4          KernSmooth_2.23-26    RColorBrewer_1.1-3    lifecycle_1.0.4       compiler_4.5.2       
-[19] farver_2.1.2          deldir_2.0-4          codetools_0.2-20      htmltools_0.5.8.1     class_7.3-23          yaml_2.3.10          
-[25] crayon_1.5.3          pillar_1.10.2         classInt_0.4-11       tidyselect_1.2.1      digest_0.6.37         purrr_1.0.4          
-[31] splines_4.5.2         ForestTools_1.0.3     polyclip_1.10-7       fastmap_1.2.0         grid_4.5.2            cli_3.6.5            
-[37] magrittr_2.0.3        e1071_1.7-16          withr_3.0.2           tensor_1.5            scales_1.4.0          sp_2.2-0             
-[43] rmarkdown_2.29        evaluate_1.0.3        knitr_1.50            mgcv_1.9-3            rlang_1.1.6           Rcpp_1.0.14          
-[49] glue_1.8.0            DBI_1.2.3             rstudioapi_0.17.1     R6_2.6.1              units_0.8-7 
+ [1] gtable_0.3.6       compiler_4.5.2     tidyselect_1.2.1   Rcpp_1.0.14        scales_1.4.0       lattice_0.22-7    
+ [7] R6_2.6.1           generics_0.1.4     classInt_0.4-11    dismo_1.3-16       tibble_3.2.1       units_0.8-7       
+[13] DBI_1.2.3          pillar_1.10.2      RColorBrewer_1.1-3 rlang_1.1.6        sp_2.2-0           cli_3.6.5         
+[19] withr_3.0.2        magrittr_2.0.3     class_7.3-23       grid_4.5.2         rstudioapi_0.17.1  lifecycle_1.0.4   
+[25] vctrs_0.6.5        KernSmooth_2.23-26 proxy_0.4-27       glue_1.8.0         raster_3.6-32      farver_2.1.2      
+[31] codetools_0.2-20   e1071_1.7-16       purrr_1.0.4        tools_4.5.2        pkgconfig_2.0.3   
