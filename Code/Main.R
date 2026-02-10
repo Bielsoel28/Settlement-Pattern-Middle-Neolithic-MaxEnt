@@ -25,7 +25,7 @@ rm(list=ls())
 # Needed packages
 packages <- c("terra", "sf", "dplyr","tidyr",
               "ggplot2","corrplot","SDMtune","blockCV",
-              "nortest","rJava")
+              "nortest","rJava","doParallel")
 
 #Optional, Run this if the pacakges are not already installed
 for (packages in packages) {
