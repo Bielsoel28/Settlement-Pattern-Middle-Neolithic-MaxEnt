@@ -569,3 +569,65 @@ writeRaster(mean_pred_map, file.path(out_dir, "pred_map.tiff"), overwrite = TRUE
 
 write.csv(auc_df, file = "Results/AUC_ME.csv", row.names = TRUE)
 
+
+# 4.4 SHAP computation (Supp. 7) ===============================================
+
+# Load extra packages
+library(fastshap)
+library(shapviz)
+library(patchwork)
+
+#Load extra functions
+pred_fun <- function(object, newdata) {
+  predict(object, newdata)
+}
+
+shap_list <- list()
+
+##Loop to run over all models
+for (i in names(list_punts)){ 
+  
+  ##Set folder where to retrieve models
+  out_dir <- file.path("Results",i,"MaxEnt")
+  
+  #Load the models
+  load(file.path(out_dir,paste0("MaxEnt_models.Rdata")))
+  
+  ##Convert models to SV objects
+  mod <- results[["MaxEnt_model"]]@models[[1]]
+  mod <- results[["MaxEnt_model"]]
+  
+  X <- mod@data@data
+  
+  names_var<- names(results[["train_data"]]@data)
+  
+  #Subset points for computation
+  set.seed(123)
+  idx <- sample(seq_len(nrow(X)), 500)  #
+  X_shap <- X[idx, ]
+  
+  shap_mat <- fastshap::explain(
+    object = mod,
+    X = X_shap,
+    pred_wrapper = pred_fun,
+    nsim = 100,
+    adjust = TRUE
+  )
+  
+  #Create final sv object
+  sv <- shapviz(shap_mat, X_pred = data.matrix(X_shap), X = X_shap, interactions = TRUE)
+  shap_list[[i]] <- sv
+  
+  ##Plot the result
+  sv_plot <- sv_importance(sv, kind = "beeswarm")
+  
+  ggsave(file.path(out_dir,paste0("SHAP.tiff")), sv_plot, width = 6, height = 8)
+}
+
+##Plot overall variable importance
+class(shap_list) <- "mshapviz"
+
+sv_plot_total <- sv_importance(shap_list, bar_type = "stack") +
+  labs(x = "Mean SHAP value")
+
+ggsave(file.path("Results/Variables_cor",paste0("SHAP_total.tiff")), sv_plot_total, width = 6, height = 8)
