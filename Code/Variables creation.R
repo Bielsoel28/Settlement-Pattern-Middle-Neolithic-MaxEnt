@@ -289,7 +289,7 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   rm(polygons_ras_fil_sf)
   
-  viewshed <- compute_viewshed(elevacio_r_3000, punts_r, r = 3000, parallel = TRUE)
+  viewshed <- compute_viewshed(elevacio_r_3000, punts_r, r = 3000, parallel = TRUE, workers = ncores)
   rast_r_3000 <- crop(z, elevacio_r_3000)
   rast_r_3000 <- resample(rast_r_3000, elevacio_r_3000)
   
