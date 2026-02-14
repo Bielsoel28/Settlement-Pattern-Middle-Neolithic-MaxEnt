@@ -493,7 +493,7 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   rm(polygons_ras_fil)
   rm(buff_3000)
   
-  #Interseting block with points
+  #Intersecting block with points
   punts_r <- st_intersection(punts, polygons_ras_fil_sf)
   
   rm(polygons_ras_fil_sf)
@@ -516,6 +516,7 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   rm(viewshed)
   
+  #Converting points to rasters and normalize it
   raster_buit <- rasterize(punts_r, raster_buit, field = "cells")
   
   rast_min <- 0
