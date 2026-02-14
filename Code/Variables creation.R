@@ -269,10 +269,12 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   # Loading the raster's block
   elevacio_r <- rast(llista_rast_parts_sorted[r])
   
+  #Extracting its metrics for a blank copy where to store results
   ext_rast <- ext(elevacio_r)
   res_rast <- res(elevacio_r)
   raster_buit <- rast(ext = ext_rast, res = res_rast, vals = NA, crs = crs(elevacio))
   
+  #Extracting buffered block area for calculations
   polygons_ras <- as.polygons(elevacio_r, dissolve = TRUE)
   names(polygons_ras)[1] <- "Layer_1" 
   polygons_ras_fil <- polygons_ras[polygons_ras$Layer_1 >= 0, ]
@@ -285,10 +287,12 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   rm(polygons_ras_fil)
   rm(buff_3000)
   
+  #Interseting block with points
   punts_r <- st_intersection(y, polygons_ras_fil_sf)
   
   rm(polygons_ras_fil_sf)
   
+  #Computing viewshed
   viewshed <- compute_viewshed(elevacio_r_3000, punts_r, r = 3000, parallel = TRUE, workers = ncores)
   rast_r_3000 <- crop(z, elevacio_r_3000)
   rast_r_3000 <- resample(rast_r_3000, elevacio_r_3000)
@@ -297,25 +301,47 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   gc()
   
-  #Loop to calculate the viewshed of each point
-  for (i2 in 1:nrow(punts_r)) {
+  #Setting up chunks for mask over paths calculations
+  chunk_size <- 200   
+  n_chunks <- ceiling(nrow(punts_r) / chunk_size)
+  VC <- numeric(nrow(punts_r))
+  
+  #Loop over chunkcs
+  for (ch in seq_len(n_chunks)) {
     
-    #Superposing viewshed raster and path raster
-    viewshed_punt <- viewshed[[as.character(i2)]] #extracting viewshed
-    rast_view <- visualize_viewshed(viewshed_punt, outputtype = "raster") #converting it to raster
-    crop_rast <- crop(rast_r_3000, rast_view)
-    extracted_raster <- mask(crop_rast, rast_view, maskvalues = 1, inverse = TRUE) #masking path raster with viewshed raster
+    idx <- ((ch - 1) * chunk_size + 1):min(ch * chunk_size, nrow(punts_r))
     
-    # Extract values from path raster
-    extracted_values <- terra::values(extracted_raster, ID = FALSE)
+    # Converting matrixs to rasters
+    viewshed_chunk <- lapply(idx, function(i) {
+      r <- visualize_viewshed(
+        viewshed[[as.character(i)]],
+        outputtype = "raster")
+      
+      r <- extend(r, rast_r_3000)
+      
+      return(r)
+    })
     
-    # Calculate the 90th quantile
-    punts_r[i2,"VC"] <- quantile(extracted_values, 0.9, na.rm = TRUE)
+    #Masking paths rasters
+    masked_vals <- lapply(viewshed_chunk, function(v) {
+      m <- mask(rast_r_3000, v, maskvalues = 1, inverse = TRUE)
+      values(m)
+    })
+    
+    #Calculating 90th quartile
+    vals_matrix <- do.call(cbind, masked_vals)
+    VC[idx] <- apply(vals_matrix, 2, quantile, probs = 0.9, na.rm = TRUE)
+
+    print(paste0(as.character(ch),"/", as.character(n_chunks)))
     
   }
   
+  #Adding value to points
+  punts_r$VC <- VC
+  
   rm(viewshed)
   
+  #Converting them to raster
   raster_buit <- rasterize(punts_r, raster_buit, field = "VC")
   
   #saving of the raster's file  
@@ -324,8 +350,6 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   rm(punts_r)
   rm(raster_buit)
-  
-  gc()
   
   cli_progress_update()
   
@@ -451,10 +475,12 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   # Loading the raster's block
   elevacio_r <- rast(llista_rast_parts_sorted[r])
   
+  #Extracting its metrics for a blank copy where to store results
   ext_rast <- ext(elevacio_r)
   res_rast <- res(elevacio_r)
   raster_buit <- rast(ext = ext_rast, res = res_rast, vals = NA, crs = crs(elevacio))
   
+  #Extracting buffered block area for calculations
   polygons_ras <- as.polygons(elevacio_r, dissolve = TRUE)
   names(polygons_ras)[1] <- "Layer_1" 
   polygons_ras_fil <- polygons_ras[polygons_ras$Layer_1 >= 0, ]
@@ -467,10 +493,12 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   rm(polygons_ras_fil)
   rm(buff_3000)
   
+  #Interseting block with points
   punts_r <- st_intersection(punts, polygons_ras_fil_sf)
   
   rm(polygons_ras_fil_sf)
   
+  #Computing viewsheds
   viewshed <- compute_viewshed(elevacio_r_3000, punts_r, r = 3000, parallel = TRUE, workers = ncores)
   
   rm(elevacio_r_3000)
@@ -500,8 +528,6 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   rm(punts_r)
   rm(raster_buit)
-  
-  gc()
   
   cli_progress_update()
 }
