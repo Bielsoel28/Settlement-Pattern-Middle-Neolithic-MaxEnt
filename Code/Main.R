@@ -196,7 +196,7 @@ normality_results_df <- data.frame(
 normality_results_df$Normal <- ifelse(normality_results_df$P_Value > 0.05, "Yes", "No")
 
 # Save the results
-write.csv(normality_results_df, paste0("Results/Variables_cor","Normality.csv"))
+write.csv(normality_results_df, paste0("Results/Variables_cor/","Normality.csv"))
 
 # 2.3 Pearson correlation test test ============================================
 
