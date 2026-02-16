@@ -405,13 +405,10 @@ llista_rast <- list.files(file.path("Data/Rasters/Visibility/RASTERS_VC"), patte
 
 # Read all rasters
 rast_list <- lapply(llista_rast, terra::rast)
-
-# Read all rasters
-rast_list_norm <- lapply(rast_list, terra::rast)
-rast_list_norm <- sprc(rast_list_norm)
+rast_list <- sprc(rast_list)
 
 # Build the mosaic (may have to be done in smaller parts for proper working)
-mosaic_rast <- mosaic(rast_list_norm, fun = mean)
+mosaic_rast <- mosaic(rast_list, fun = mean)
 
 #Fill gaps and mask
 mosaic_rast <- focal(mosaic_rast, w = matrix(1, 51, 51), fun = mean, na.policy = "only", na.rm = TRUE)
