@@ -234,7 +234,8 @@ bg_coords <- st_coordinates(sample)
 pres_coords <- st_coordinates(presences)
 
 # Extract environmental values for the  presence points
-pres_values <- terra::extract(predictors_final, presences, ID = FALSE)
+sample_values <- as.matrix(sample_values)
+pres_values <- as.matrix(terra::extract(predictors_final, presences, ID = FALSE))
 
 ##Prepare objects for loop functionality
 n  <- nrow(pres_values)
