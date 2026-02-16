@@ -281,80 +281,124 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   polygons_ras_fil_sf <- st_as_sf(aggregate(polygons_ras_fil))
   buff_3000 <- st_buffer(polygons_ras_fil_sf, 3000) # for paths creation
   elevacio_r_3000 <- crop(elevacio, buff_3000)
-  
-  rm(elevacio_r)
-  rm(polygons_ras)
-  rm(polygons_ras_fil)
-  rm(buff_3000)
+  writeRaster(elevacio_r_3000, "elevacio_r_300.tiff", overwrite = TRUE) #saving it for parallel computing
   
   #Interseting block with points
   punts_r <- st_intersection(y, polygons_ras_fil_sf)
   
-  rm(polygons_ras_fil_sf)
+  ##Set up first parallel loop
+  ncores <- 4
   
-  #Computing viewshed
-  viewshed <- compute_viewshed(elevacio_r_3000, punts_r, r = 3000, parallel = TRUE, workers = ncores)
+  # Split row indices into equal groups
+  idx_split <- split(seq_len(nrow(punts_r)),
+                     cut(seq_len(nrow(punts_r)), ncores, labels = FALSE))
+  
+  # Create list of sf subsets
+  punts_split <- lapply(idx_split, function(i) punts_r[i, ])
+  
+  #Create cluster
+  clus <- makeCluster(ncores)
+  
+  #Load required packages on each worker
+  clusterEvalQ(clus, {
+    library(terra)
+    library(sf)
+    library(viewscape)
+  })
+  
+  #Function for workers in parallel
+  results <- parLapply(clus, punts_split, function(punts_subset) {
+    elevacio_r_3000 <- rast("elevacio_r_300.tiff")
+    compute_viewshed(elevacio_r_3000, punts_subset, r = 3000)
+  })
+  
+  stopCluster(clus) #Stop cluster
+  
+  #Collect results
+  viewshed <- unlist(results, recursive = FALSE)
+  names(viewshed) <- c(1:length(viewshed))
+  
+  #Crop and resample path raster for second loop
   rast_r_3000 <- crop(z, elevacio_r_3000)
   rast_r_3000 <- resample(rast_r_3000, elevacio_r_3000)
+  writeRaster(rast_r_3000, "rast_r_300.tiff", overwrite = TRUE) #save it for parallel
   
-  rm(elevacio_r_3000)
-  
-  gc()
-  
-  #Setting up chunks for mask over paths calculations
+  ##Setting up second parallel loop
   chunk_size <- 200   
   n_chunks <- ceiling(nrow(punts_r) / chunk_size)
   VC <- numeric(nrow(punts_r))
   
-  #Loop over chunkcs
-  for (ch in seq_len(n_chunks)) {
+  #Create cluster
+  clus <- makeCluster(ncores)
+  
+  #Load required packages on each worker
+  clusterEvalQ(clus, {
+    library(terra)
+    library(viewscape)
+  })
+  
+  #Functions for workers in parallel
+  clusterExport(
+    clus,
+    varlist = c("viewshed", "chunk_size", "n_chunks")
+  )
+  
+  results <- parLapply(clus, seq_len(n_chunks), function(ch) {
     
-    idx <- ((ch - 1) * chunk_size + 1):min(ch * chunk_size, nrow(punts_r))
+    rast_r_3000 <- rast("rast_r_300.tiff")
     
-    # Converting matrixs to rasters
+    idx <- ((ch - 1) * chunk_size + 1):
+      min(ch * chunk_size, length(viewshed))
+    
     viewshed_chunk <- lapply(idx, function(i) {
+      
       r <- visualize_viewshed(
         viewshed[[as.character(i)]],
-        outputtype = "raster")
+        outputtype = "raster"
+      )
       
-      r <- extend(r, rast_r_3000)
-      
-      return(r)
+      extend(r, rast_r_3000)
     })
     
-    #Masking paths rasters
     masked_vals <- lapply(viewshed_chunk, function(v) {
       m <- mask(rast_r_3000, v, maskvalues = 1, inverse = TRUE)
       values(m)
     })
     
-    #Calculating 90th quartile
     vals_matrix <- do.call(cbind, masked_vals)
-    VC[idx] <- apply(vals_matrix, 2, quantile, probs = 0.9, na.rm = TRUE)
-
-    print(paste0(as.character(ch),"/", as.character(n_chunks)))
     
-  }
+    VC_chunk <- apply(
+      vals_matrix,
+      2,
+      quantile,
+      probs = 0.9,
+      na.rm = TRUE
+    )
+    
+    gc()
+    
+    return(list(idx = idx, VC = VC_chunk))
+  })
   
-  #Adding value to points
+  stopCluster(clus)
+  
+  #Collect results
+  VC <- numeric(length(viewshed))
+  for (res in results) {
+    VC[res$idx] <- res$VC
+  }
   punts_r$VC <- VC
   
-  rm(viewshed)
-  
-  #Converting them to raster
+  #Build final raster
   raster_buit <- rasterize(punts_r, raster_buit, field = "VC")
   
   #saving of the raster's file  
   nom_arxiu <- paste("block",as.character(r),"total_viewshed_paths.tif") #creation of file name
   writeRaster(raster_buit, filename = file.path("Data/Rasters/Visibility/RASTERS_VC",nom_arxiu)) #saving of the raster of viewshed
   
-  rm(punts_r)
-  rm(raster_buit)
-  
   cli_progress_update()
   
 }
-
 
 # List all TIFF files in the RASTERS_VC folder
 llista_rast <- list.files(file.path("Data/Rasters/Visibility/RASTERS_VC"), pattern = "\\.tif[f]?$", full.names = TRUE)
@@ -458,7 +502,6 @@ numeros <- as.numeric(gsub("Data/Rasters/Visibility/RASTER_PARTS/block_|\\.tif",
 # Oder rasters by number
 llista_rast_parts_sorted <- llista_rast_parts[order(numeros)]
 
-
 ##Read all rasters
 #Function to control the time
 cli_progress_bar(
@@ -487,19 +530,41 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   polygons_ras_fil_sf <- st_as_sf(aggregate(polygons_ras_fil))
   buff_3000 <- st_buffer(polygons_ras_fil_sf, 3000) # for paths creation
   elevacio_r_3000 <- crop(elevacio, buff_3000)
-  
-  rm(elevacio_r)
-  rm(polygons_ras)
-  rm(polygons_ras_fil)
-  rm(buff_3000)
+  writeRaster(elevacio_r_3000, "elevacio_r_300.tiff", overwrite = TRUE) #saving it for parallel computing
   
   #Intersecting block with points
   punts_r <- st_intersection(punts, polygons_ras_fil_sf)
   
-  rm(polygons_ras_fil_sf)
+  ncores <- 4
   
-  #Computing viewsheds
-  viewshed <- compute_viewshed(elevacio_r_3000, punts_r, r = 3000, parallel = TRUE, workers = ncores)
+  # Split row indices into equal groups
+  idx_split <- split(seq_len(nrow(punts_r)),
+                     cut(seq_len(nrow(punts_r)), ncores, labels = FALSE))
+  
+  # Create list of sf subsets
+  punts_split <- lapply(idx_split, function(i) punts_r[i, ])
+  
+  #Create cluster
+  clus <- makeCluster(ncores)
+  
+  #Load required packages on each worker
+  clusterEvalQ(clus, {
+    library(terra)
+    library(sf)
+    library(viewscape)
+  })
+  
+  #Function for workers in parallel
+  results <- parLapply(clus, punts_split, function(punts_subset) {
+    elevacio_r_3000 <- rast("elevacio_r_300.tiff")
+    compute_viewshed(elevacio_r_3000, punts_subset, r = 3000)
+  })
+  
+  stopCluster(clus) #Stop cluster
+  
+  #Collect results
+  viewshed <- unlist(results, recursive = FALSE)
+  names(viewshed) <- c(1:length(viewshed))
   
   rm(elevacio_r_3000)
   
@@ -532,7 +597,6 @@ for(r in seq_along(llista_rast_parts_sorted)) {
   
   cli_progress_update()
 }
-
 
 # List all TIFF files in the RASTERS_RAW folder
 llista_rast <- list.files(file.path("Data/Rasters/Visibility/RASTERS"), pattern = "\\.tif[f]?$", full.names = TRUE)
