@@ -26,7 +26,7 @@ rm(list=ls())
 packages <- c("terra", "sf", "dplyr","tidyr","ggplot2","magick","grid","gridExtra","pdftools","gtable")
 
 #Optional, Run this if the pacakges are not already installed
-for (packages in packages) {
+for (package in packages) {
   install.packages(package, character.only = TRUE)
 }
 

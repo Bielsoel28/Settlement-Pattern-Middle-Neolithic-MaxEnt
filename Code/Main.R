@@ -28,7 +28,7 @@ packages <- c("terra", "sf", "dplyr","tidyr",
               "nortest","rJava","doParallel")
 
 #Optional, Run this if the pacakges are not already installed
-for (packages in packages) {
+for (package in packages) {
   install.packages(package, character.only = TRUE)
 }
 

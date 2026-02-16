@@ -27,7 +27,7 @@ packages <- c("leastcostpath","terra", "sf", "dplyr","tidyr", "doParallel", "vie
               "ggplot2","spatstat","GA","stars","corrplot","maxnet","blockCV","cli")
 
 #Optional, Run this if the pacakges are not already installed
-for (packages in packages) {
+for (package in packages) {
   install.packages(package, character.only = TRUE)
 }
 
