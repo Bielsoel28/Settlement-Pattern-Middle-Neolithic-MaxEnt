@@ -220,10 +220,11 @@ gc()
 # 3 Selection of background points #############################################
 ### Folllowing background aggregation method (Xu et al., 2024)
 
-# 3.1 Setting up data for parallel computing ===================================
+# 3.1 Setting up calculation settings ==========================================
 
-## Decay factor for geographic distance
-k <- 1  
+## Decay factor for geographic distance and seed
+k <- 1
+set.seed(234) 
 
 ## Loading Presence points
 presences <- list_punts[[1]]  
@@ -236,107 +237,107 @@ pres_coords <- st_coordinates(presences)
 pres_values <- terra::extract(predictors_final, presences, ID = FALSE)
 
 ##Prepare objects for loop functionality
-n <- nrow(presences)
-aggregation_scores <- numeric(nrow(sample))  # Vector to store aggregation scores
+n  <- nrow(pres_values)
+p  <- ncol(pres_values)
+nb <- nrow(sample_values)
 
-# 3.2 Loop for parallel calculation aggregation scores =========================
+## Precompute stats
+# Standard deviation per variable
+sigma_v <- apply(pres_values, 2, sd)
 
-## Set up parallel loop 
-ncores <- 10
-sim_per_core <- ceiling(nrow(sample) / ncores)  # split iterations across cores
+# Bandwidth
+h <- sigma_v * (4 / (3 * n))^0.2
 
-# Create cluster
-clus <- makeCluster(ncores)
+# Constant factor of Gaussian
+gaussian_const <- 1 / sqrt(2 * pi)
 
-# Load required packages on each worker
-clusterEvalQ(clus, {
-  library(terra)
-  library(sf)
-})
+# 3.2 Loop for calculation of aggregation scores ===============================
 
-# Export necessary objects to workers
-clusterExport(clus, varlist = c("sample", "bg_coords", "sample_values", "pres_coords", "pres_values", "k", "n", "aggregation_scores"))
+#setting seed
+aggregation_scores <- numeric(nb)
 
-## Worker function
-worker_aggregation <- function(i) {
-  # Extract coordinates for background and presence points
-  bg_coords_i <- bg_coords[i, ]
-  bg_values_i <- sample_values[i, ]
+#Main loop over points
+for (i in seq_len(nb)) {
   
-  # Calculate geographic distance (d_j) between background point and all presence points
-  distances <- sqrt((bg_coords_i[1] - pres_coords[, 1])^2 + (bg_coords_i[2] - pres_coords[, 2])^2 + 1^2)
+  # Geographic weights 
+  dx <- bg_coords[i, 1] - pres_coords[, 1]
+  dy <- bg_coords[i, 2] - pres_coords[, 2]
+  distances <- sqrt(dx^2 + dy^2 + 1)   # keep your +1 term
   
-  # Calculate weight (w_j) based on geographic distance (d_j)
   weights <- 1 / (distances^k)
   
-  # Calculate the standard deviation (sigma_v) for the environmental variable values at presence points
-  sigma_v <- apply(pres_values, 2, sd)
+  ## Environmental similarity 
   
-  # Calculate the bandwidth (h) using Equation (2)
-  h <- sigma_v * (4 / (3 * n))^0.2
+  # Difference matrix (presence × variables)
+  diff_env <- sweep(pres_values, 2, sample_values[i, ], "-")
   
-  # Initialize environmental similarity (S_v_i)
-  Sv_i <- 0
+  # Gaussian kernel (vectorized)
+  similarity_matrix <- exp(-(diff_env^2) / (2 * h^2))
   
-  # Loop over all presence points (j) to compute the weighted sum of environmental similarities
-  for (j in 1:n) {
-    diff_env <- (bg_values_i - pres_values[j, ])
-    similarity_term <- exp(- (diff_env^2) / (2 * h^2))
-    Sv_i <- Sv_i + weights[j] * (1 / sqrt(2 * pi)) * similarity_term
-  }
+  # Apply geographic weights (recycle over columns)
+  weighted_similarity <- similarity_matrix * weights
   
-  # Normalize Sv_i by n * h (as per the original formula)
-  Sv_i <- Sv_i / (n * h)
+  # Sum over presence points
+  Sv_i <- colSums(weighted_similarity) / (n * h)
   
-  # Return the aggregation score for the current background point
-  return(mean(as.numeric(Sv_i)))
+  # Final score for this background point
+  aggregation_scores[i] <- mean(gaussian_const * Sv_i)
+  
+  print(paste0(as.character(i),"/",as.character(nb)))
 }
 
-# Run the function in parallel for each row of the sample
-aggregation_scores <- unlist(parLapply(clus, 1:nrow(sample), worker_aggregation))
+## Normalization of values
+normalized_scores <- (aggregation_scores - min(aggregation_scores)) /
+  (max(aggregation_scores) - min(aggregation_scores))
 
-# Stop the cluster after computations are done
-stopCluster(clus)
+## Weighted sampling
+sampled_background_ids <- sample(
+  sample$FID_fishne,
+  size = 10000,
+  prob = normalized_scores,
+  replace = FALSE
+)
 
-# Normalize the aggregation scores
-normalized_scores <- (aggregation_scores - min(aggregation_scores)) / (max(aggregation_scores) - min(aggregation_scores))
-
-## Sample background points based on the normalized aggregation scores
-set.seed(234)  # Set seed for reproducibility
-sampled_background_ids <- sample(sample$FID_fishne, size = 10000, prob = normalized_scores, replace = FALSE)
-
-# Select the sampled background points from the original dataset
+##Subset final background points 
 sample_bg_ag_sampled <- sample[sample$FID_fishne %in% sampled_background_ids, ]
+
 sample_bg_ag <- sample
-sample_bg_ag$Normalized_scor <- normalized_scores #save all values
+sample_bg_ag$Normalized_scor <- normalized_scores
 
-# Plot the results
-tiff(file.path("Results/Variables_cor","selected_bg_points.tiff"), width = 9*300, height = 6*300, res = 300) # Width and height in pixels
-plot(st_geometry(sample), col = "gray", pch = 16, main = "Presence, Background, and Sampled Background Points", 
-     xlab = "Longitude", ylab = "Latitude", cex = 0.6, axes = TRUE)
-
-plot(st_geometry(sample_bg_ag_sampled), col = "blue", pch = 20, add = TRUE, cex = 0.8)
-
-plot(st_geometry(presences), col = "red", pch = 20, add = TRUE, cex = 0.8)
-
-legend("bottomright", 
-       legend = c("Background Points", "Presence Points", "Sampled Background Points"), 
-       col = c("gray", "red", "blue"), 
-       pch = c(16, 20, 20),  # Different shapes for different point types
-       pt.cex = c(0.6, 0.8, 0.8),  # Adjust point size for better visibility
-       bty = "n",  # Remove the border around the legend
-       cex = 0.9)  # Adjust font size
-
-dev.off()
-
-# Save the selected background points 
+#Save the selected and all background points 
 st_write(sample_bg_ag, file.path("Results/Variables_cor","all_bg_points.shp"))
 st_write(sample_bg_ag_sampled, file.path("Results/Variables_cor","selected_bg_points.shp"))
+
+##Plot the result
+tiff(file.path("Results/Variables_cor","selected_bg_points.tiff"),
+     width = 9*300, height = 6*300, res = 300)
+
+plot(st_geometry(sample), col = "gray", pch = 16,
+     main = "Presence, Background, and Sampled Background Points",
+     xlab = "Longitude", ylab = "Latitude",
+     cex = 0.6, axes = TRUE)
+
+plot(st_geometry(sample_bg_ag_sampled), col = "blue", pch = 20,
+     add = TRUE, cex = 0.8)
+
+plot(st_geometry(presences), col = "red", pch = 20,
+     add = TRUE, cex = 0.8)
+
+legend("bottomright",
+       legend = c("Background Points",
+                  "Presence Points",
+                  "Sampled Background Points"),
+       col = c("gray", "red", "blue"),
+       pch = c(16, 20, 20),
+       pt.cex = c(0.6, 0.8, 0.8),
+       bty = "n",
+       cex = 0.9)
+
+dev.off()
 
 rm(list=setdiff(ls(),c("list_punts","predictors_final","sample","sample_bg_ag_sampled")))
 
 gc()
-
 
 # 4 MaxEnt modelling ###########################################################
 
