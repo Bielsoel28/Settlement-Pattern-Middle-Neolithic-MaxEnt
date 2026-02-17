@@ -320,7 +320,7 @@ for (i in 2:n) {
 
 dev.off()
 
-# 4 Figure 7 and Supplementary X ###############################################
+# 4 Figure 7 and Supplementary 5.4 #############################################
 
 path <- "Results"
 
@@ -391,7 +391,7 @@ for (folder in folders_starting_with_p) {
 }
 
 
-# 5 supplementary X ############################################################
+# 5 Supplementary 4.4.1 ########################################################
 
 # Select folders and files 
 path <- "Results"
