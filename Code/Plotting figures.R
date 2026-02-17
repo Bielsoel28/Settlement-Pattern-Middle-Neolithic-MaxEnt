@@ -320,7 +320,78 @@ for (i in 2:n) {
 
 dev.off()
 
-# 4 Plotting figure 7 and supplementary 6 ######################################
+# 4 Figure 7 and Supplementary X ###############################################
+
+path <- "Results"
+
+# List all items in the directory that start with "p"
+folders_starting_with_p <- list.dirs(path, recursive = FALSE, full.names = TRUE)
+
+# Filter only those whose names start with 'p' or 'P'
+folders_starting_with_p <- folders_starting_with_p[!grepl("^z", basename(folders_starting_with_p), ignore.case = TRUE)]
+
+# PDF filenames relative to folder
+pdf_names <- c(
+  "K_base.pdf",
+  "Kres_pred_map.pdf",
+  "KPPM_Ca.pdf",
+  "KPPM_Ma.pdf",
+  "KPPM_Th.pdf"
+)
+
+#Load the graphs
+for (folder in folders_starting_with_p) {
+  
+  folder_path <- file.path(folder, "MaxEnt")
+  
+  pdf_grobs <- list()
+  for (pdf_name in pdf_names) {
+    pdf_file <- file.path(folder_path, pdf_name)
+    if (!file.exists(pdf_file)) next
+    
+    img <- image_read_pdf(pdf_file, density = 300)
+    img <- img[1]  # first page
+    
+    r <- as.raster(image_convert(img, format = "rgba"))
+    pdf_grobs[[length(pdf_grobs)+1]] <- rasterGrob(r, interpolate = TRUE)
+  }
+  
+  if (length(pdf_grobs) == 0) next
+  
+  num_pdfs <- length(pdf_grobs)
+  
+  # Determine layout: 2 columns per row
+  n_col <- 2
+  n_row <- ceiling(num_pdfs / n_col)
+  
+  layout_matrix <- matrix(seq_len(n_row * n_col), nrow = n_row, ncol = n_col, byrow = TRUE)
+  
+  # Replace empty slots with NA if num_pdfs < n_row * n_col
+  layout_matrix[layout_matrix > num_pdfs] <- NA
+  
+  # Output TIFF
+  out_file <- file.path(folder_path, "Combined_PPM.tiff")
+  
+  #Save the plot
+  tiff(
+    out_file,
+    width = 8*300,
+    height = 12*300,
+    res = 300,
+    bg = "white"
+  )
+  
+  grid.arrange(
+    grobs = pdf_grobs,
+    layout_matrix = layout_matrix
+  )
+  
+  dev.off()
+  message("Saved combined PDFs for folder: ", folder)
+}
+
+
+# 5 supplementary X ############################################################
 
 # Select folders and files 
 path <- "Results"
