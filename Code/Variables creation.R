@@ -192,7 +192,7 @@ ymin <- ext_r[3]
 ymax <- ext_r[4]
 
 # Defining block size in cells
-block_cells <- 200  # Number of cells per block in each dimension
+block_cells <- 74 # Number of cells per block in each dimension
 res_x <- res(elevacio)[1]  # Resolution in x direction
 res_y <- res(elevacio)[2]  # Resolution in y direction
 
@@ -242,8 +242,6 @@ rm(blocks)
 gc()
 
 print("Step 1 completed")
-
-ncores <- detectCores() - 1 #identification of number of pc cores
 
 # List all TIFF files in the RASTERS_RAW folder
 llista_rast_parts <- list.files("Data/Rasters/Visibility/RASTERS_PARTS_VC", pattern = "\\.tif[f]?$", full.names = TRUE)
@@ -440,7 +438,7 @@ ymin <- ext_r[3]
 ymax <- ext_r[4]
 
 # Defining block size in cells
-block_cells <- 200  # Number of cells per block in each dimension
+block_cells <- 74  # Number of cells per block in each dimension
 res_x <- res(elevacio)[1]  # Resolution in x direction
 res_y <- res(elevacio)[2]  # Resolution in y direction
 
@@ -488,8 +486,6 @@ for (i in seq(xmin, xmax, by = block_size_x)) {
 rm(blocks)
 
 print("Step 1 completed")
-
-ncores <- detectCores() - 1 #identification of number of pc cores
 
 # List all TIFF files in the RASTERS_RAW folder
 llista_rast_parts <- list.files("Data/Rasters/Visibility/RASTER_PARTS", pattern = "\\.tif[f]?$", full.names = TRUE)
