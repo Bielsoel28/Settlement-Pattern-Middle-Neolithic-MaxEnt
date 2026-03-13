@@ -23,7 +23,7 @@ rm(list=ls())
 # 0.2 Install packages =========================================================
 
 # Needed packages
-packages <- c("terra", "sf", "dplyr","tidyr", "doParallel", "viewscape","cli")
+packages <- c("leastcostpath","terra", "sf", "dplyr","tidyr", "doParallel", "viewscape","cli")
 
 #Optional, Run this if the pacakges are not already installed
 for (package in packages) {
