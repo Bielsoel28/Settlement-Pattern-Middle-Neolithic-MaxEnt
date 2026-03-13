@@ -81,6 +81,8 @@ twi[is.infinite(values(twi))] <- NA
 # Save to file
 writeRaster(twi, "Data/Rasters/13- TWI.tiff", overwrite = TRUE)
 
+rm(list=setdiff(ls(), c("rast_cat")))
+gc()
 
 # 4 Multi-scale relief model ###################################################
 
