@@ -1222,7 +1222,7 @@ if (!all(res(cc) == res(ref_raster))) {
 }
 
 #Mask
-cc <- mask(cc, cost_raster)
+cc <- mask(cc, rast_cat)
 
 # Save the results
 writeRaster(cc, file.path("Data/Rasters", "34- Cost from variscita.tif"), overwrite = TRUE)
