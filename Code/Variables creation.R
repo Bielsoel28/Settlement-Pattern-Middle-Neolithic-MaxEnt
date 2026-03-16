@@ -950,7 +950,7 @@ cost_raster <- create_slope_cs(r_lr, cost_function =  "tobler", neighbours = 16)
 rivers <- st_read("Data/Vectors/Rius_&_llacs.shp")
 rivers <- st_cast(rivers, "LINESTRING") #convert to lines
 
-#Sample points every 30 m along each line
+#Sample points every along each line
 samples <- st_line_sample(rivers, density = 1 / 200, type = "regular")  
 
 #Initiate an empty object to store cleaned points
@@ -1053,7 +1053,7 @@ cost_raster[is.na(cost_raster)] <- 0.005 #add values to NA
 cost_raster <- mask(cost_raster, aoi) #mask with aoi
 cost_raster <- create_cs(cost_raster, neighbours = 16)
 
-#Sample points every 30 m along each line
+#Sample points every along each line
 samples <- st_line_sample(coast, density = 1 / 200, type = "regular")  
 
 #Initiate an empty object to store cleaned points
