@@ -1050,7 +1050,6 @@ coast <- st_cast(coast, "LINESTRING") #convert to lines
 ## Update cost raster with values on coast line for right calculations
 cost_raster <- rasterise(cost_raster) #convert back to raster
 cost_raster[is.na(cost_raster)] <- 0.005 #add values to NA
-cost_raster <- mask(cost_raster, aoi) #mask with aoi
 cost_raster <- create_cs(cost_raster, neighbours = 16)
 
 #Sample points every along each line
@@ -1221,6 +1220,9 @@ if (!all(ext(cc) == ext(ref_raster))) {
 if (!all(res(cc) == res(ref_raster))) {
   cc <- resample(cc, ref_raster, method = "bilinear")
 }
+
+#Mask
+cc <- mask(cc, cost_raster)
 
 # Save the results
 writeRaster(cc, file.path("Data/Rasters", "34- Cost from variscita.tif"), overwrite = TRUE)
