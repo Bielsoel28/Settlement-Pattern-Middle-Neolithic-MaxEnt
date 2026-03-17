@@ -940,9 +940,9 @@ gc()
 
 # 10.1 Aggregate DEM ===========================================================
 
-#Aggregate DEM to facilitate cost computation
-r_lr <- aggregate(rast_cat, fact= 2, fun = mean)
-cost_raster <- create_slope_cs(r_lr, cost_function =  "tobler", neighbours = 16)
+#Create cost raster
+cost_raster <- create_slope_cs(rast_cat, cost_function =  "tobler", neighbours = 16)
+cost_raster <- rasterise(cost_raster) #return to raster
 
 # 10.2 Cost from rivers and lakes ==============================================
 
@@ -951,7 +951,7 @@ rivers <- st_read("Data/Vectors/Rius_&_llacs.shp")
 rivers <- st_cast(rivers, "LINESTRING") #convert to lines
 
 #Sample points every along each line
-samples <- st_line_sample(rivers, density = 1 / 200, type = "regular")  
+samples <- st_line_sample(rivers, density = 1 / 100, type = "regular")  
 
 #Initiate an empty object to store cleaned points
 all_points <- st_sfc(crs = st_crs(rivers))
@@ -968,76 +968,51 @@ for (i in seq_along(samples)) {
 
 rivers_points <- st_sf(geometry = all_points)  #Convert to sf object
 
-# Initialize a raster to store the minimum accumulated cost values
-min_cc <- rasterise(cost_raster)
-values(min_cc) <- Inf
+# Filter points inside raster extent
+ext_r <- ext(cost_raster)
+coords <- st_coordinates(rivers_points)
 
-##Compute cost for all the point
-#Function to control the time
-cli_progress_bar(
-  format = "Processing river points {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
-  total = nrow(rivers_points),
-  clear = FALSE
-)
+valid <- coords[,1] >= ext_r$xmin & coords[,1] <= ext_r$xmax &
+  coords[,2] >= ext_r$ymin & coords[,2] <= ext_r$ymax
 
-#Main loop
-for (i in seq_len(nrow(rivers_points))) {
-  
-  # Compute accumulated cost from each origin
-  coords <- st_coordinates(rivers_points[i, ])
-  
-  # Check if point is inside raster extent
-  if (!all(
-    coords[, 1] >= xmin(min_cc) & coords[, 1] <= xmax(min_cc) &
-    coords[, 2] >= ymin(min_cc) & coords[, 2] <= ymax(min_cc)
-  )) {
-    next
-  }
-  
-  cc <- create_accum_cost(
-    x = cost_raster,
-    origins = rivers_points[i, ],
-    FUN = mean,
-    rescale = FALSE
-  )
-  
-  # Update min_cc with the minimum value between the existing and the new cc
-  min_cc <- min(min_cc, cc, na.rm = TRUE)
-  
-  rm(cc)
-  gc()
-  
-  cli_progress_update()
-}
+rivers_points_valid <- rivers_points[valid, ]
 
-# Replace Inf with NA
-min_cc[values(min_cc) == Inf] <- NA
-min_cc <- resample(min_cc, rast_cat, method = "bilinear")
+# Rasterize the river/lake points as target cells
+targets <- rast(cost_raster)
+values(targets) <- NA
 
-#Adapt to final res and ext
+# Rasterize points (set value = 1 for target cells)
+targets <- rasterize(vect(rivers_points_valid), targets, field = 1)
+
+# Prepare input for costDist
+cost_input <- cost_raster
+cost_input[!is.na(targets)] <- 0  # target cells must be zero cost
+
+# Compute cost-distance
+min_cc <- costDist(cost_input, target = 0)
+
+# Adapt to final extent, resolution, CRS
 ref_raster <- rast_cat
-ref_extent <- ext(ref_raster)
-ref_crs <- crs(ref_raster)
-ref_res <- res(ref_raster)
 
-# Reproject to reference CRS
 if (crs(min_cc) != crs(ref_raster)) {
-  min_cc <- project(min_cc, ref_raster, method = "bilinear")  # continuous
+  min_cc <- project(min_cc, ref_raster, method = "bilinear")
 }
 
-# Extend to reference extent
 if (!all(ext(min_cc) == ext(ref_raster))) {
   min_cc <- extend(min_cc, ext(ref_raster))
 }
 
-# Match resolution
 if (!all(res(min_cc) == res(ref_raster))) {
   min_cc <- resample(min_cc, ref_raster, method = "bilinear")
 }
 
-# Save to file
+# Post-processing: mask and resample to reference raster
+min_cc <- mask(min_cc, rast_cat)
+
+# Save output
 writeRaster(min_cc, "Data/Rasters/32- Cost from rivers and lakes.tif", overwrite = TRUE)
 
+# Clean up
 rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
 gc()
 
@@ -1047,13 +1022,8 @@ gc()
 coast <- st_read("Data/Vectors/Rast_cat_coast_line_mod.shp")
 coast <- st_cast(coast, "LINESTRING") #convert to lines
 
-## Update cost raster with values on coast line for right calculations
-cost_raster <- rasterise(cost_raster) #convert back to raster
-cost_raster[is.na(cost_raster)] <- 0.005 #add values to NA
-cost_raster <- create_cs(cost_raster, neighbours = 16)
-
 #Sample points every along each line
-samples <- st_line_sample(coast, density = 1 / 200, type = "regular")  
+samples <- st_line_sample(coast, density = 1 / 100, type = "regular")  
 
 #Initiate an empty object to store cleaned points
 all_points <- st_sfc(crs = st_crs(coast))
@@ -1070,65 +1040,45 @@ for (i in seq_along(samples)) {
 
 coast_points <- st_sf(geometry = all_points)  #Convert to sf object
 
-# Initialize a raster to store the minimum accumulated cost values
-min_cc <- rasterise(cost_raster)
-values(min_cc) <- Inf
+# Filter points inside raster extent
+ext_r <- ext(cost_rast)
+coords <- st_coordinates(coast_points)
+valid <- coords[,1] >= ext_r$xmin & coords[,1] <= ext_r$xmax &
+  coords[,2] >= ext_r$ymin & coords[,2] <= ext_r$ymax
+coast_points_valid <- coast_points[valid, ]
 
-#Compute cost for all the point
-cli_progress_bar(
-  format = "Processing coast points {.val {i}} {cli::pb_bar} {cli::pb_percent} [{cli::pb_current}/{cli::pb_total}] | ETA: {cli::pb_eta}",
-  total = nrow(coast_points),
-  clear = FALSE
-)
+# Rasterize the points as targets
+targets <- rast(cost_rast)
+values(targets) <- NA
+targets <- rasterize(vect(coast_points_valid), targets, field = 1)
 
-#Main loop
-for (i in 1:nrow(coast_points)) {
-  # Compute accumulated cost from each origin
-  coords <- st_coordinates(coast_points[i,])
-  
-  # Check if point is inside raster extent
-  if (!all(coords[,1] >= xmin(min_cc) & coords[,1] <= xmax(min_cc) &
-           coords[,2] >= ymin(min_cc) & coords[,2] <= ymax(min_cc))) {
-    next  # skip this iteration
-  }
-  
-  cc <- create_accum_cost(x = cost_raster, origins = coast_points[i,], FUN = mean, rescale = FALSE)
-  
-  # Update min_cc with the minimum value between the existing and the new cc
-  min_cc <- min(min_cc, cc, na.rm = TRUE)
-  
-  rm(cc)
-  gc()
-  
-  cli_progress_update()
-}
+# Prepare cost raster for costDist
+# target cells must have zero cost
+cost_input <- cost_rast
+cost_input[!is.na(targets)] <- 0
 
-# Replace Inf with NA
-min_cc[values(min_cc) == Inf] <- NA
-min_cc <- resample(min_cc, rast_cat, method = "bilinear")
+# Compute cost-distance
+min_cc <- costDist(cost_input, target = 0)
 
-#Adapt to final res and ext
+# Adapt to final extent, CRS, and resolution
 ref_raster <- rast_cat
-ref_extent <- ext(ref_raster)
-ref_crs <- crs(ref_raster)
-ref_res <- res(ref_raster)
 
-# Reproject to reference CRS
 if (crs(min_cc) != crs(ref_raster)) {
-  min_cc <- project(min_cc, ref_raster, method = "bilinear")  # continuous
+  min_cc <- project(min_cc, ref_raster, method = "bilinear")
 }
 
-# Extend to reference extent
 if (!all(ext(min_cc) == ext(ref_raster))) {
   min_cc <- extend(min_cc, ext(ref_raster))
 }
 
-# Match resolution
 if (!all(res(min_cc) == res(ref_raster))) {
   min_cc <- resample(min_cc, ref_raster, method = "bilinear")
 }
 
-# Save to file
+# Post-processing: mask and resample
+min_cc <- mask(min_cc, rast_cat)
+
+# Save the output
 writeRaster(min_cc, "Data/Rasters/33- Cost from coast.tif", overwrite = TRUE)
 
 rm(list=setdiff(ls(), c("rast_cat","cost_raster","r_lr")))
