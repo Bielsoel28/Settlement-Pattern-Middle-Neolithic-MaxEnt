@@ -1035,6 +1035,9 @@ if (!all(res(min_cc) == res(ref_raster))) {
   min_cc <- resample(min_cc, ref_raster, method = "bilinear")
 }
 
+# Mask
+min_cc <- mask(min_cc, ref_raster)
+
 # Save to file
 writeRaster(min_cc, "Data/Rasters/32- Cost from rivers and lakes.tif", overwrite = TRUE)
 
@@ -1105,7 +1108,6 @@ for (i in 1:nrow(coast_points)) {
 
 # Replace Inf with NA
 min_cc[values(min_cc) == Inf] <- NA
-min_cc <- resample(min_cc, rast_cat, method = "bilinear")
 
 #Adapt to final res and ext
 ref_raster <- rast_cat
@@ -1127,6 +1129,9 @@ if (!all(ext(min_cc) == ext(ref_raster))) {
 if (!all(res(min_cc) == res(ref_raster))) {
   min_cc <- resample(min_cc, ref_raster, method = "bilinear")
 }
+
+# Mask
+min_cc <- mask(min_cc, ref_raster)
 
 # Save to file
 writeRaster(min_cc, "Data/Rasters/33- Cost from coast.tif", overwrite = TRUE)
