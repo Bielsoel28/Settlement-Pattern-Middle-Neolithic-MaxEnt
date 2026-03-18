@@ -617,7 +617,7 @@ gc()
 # 8 Visual Prominence Index ####################################################
 
 #Loading total viewshed raster
-total_view <- rast("Data/Rasters/23- Visibility Index.tiff")
+total_view <- rast("Data/Rasters/23- Visibility Index.tif")
 
 #Settign up MSRM function
 msrm <- function(r, fmin = 5, fmax = 100, x = 1.6, outdir = tempdir()) {
