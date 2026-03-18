@@ -411,6 +411,7 @@ mosaic_rast <- mosaic(rast_list, fun = mean)
 
 #Fill gaps and mask
 mosaic_rast <- focal(mosaic_rast, w = matrix(1, 51, 51), fun = mean, na.policy = "only", na.rm = TRUE)
+mosaic_rast <- extend(mosaic_rast, ext(elevacio))
 mosaic_rast <- mask(mosaic_rast, elevacio)
 
 writeRaster(mosaic_rast, filename = "Data/Rasters/22- Path visibility (Top 10%).tif") #saving of the raster of viewshed
@@ -604,6 +605,7 @@ mosaic_rast <- mosaic(rast_list, fun = mean)
 
 #Fill gaps and mask
 mosaic_rast <- focal(mosaic_rast, w = matrix(1, 51, 51), fun = mean, na.policy = "only", na.rm = TRUE)
+mosaic_rast <- extend(mosaic_rast, ext(elevacio))
 mosaic_rast <- mask(mosaic_rast, elevacio)
 
 #Save the results
