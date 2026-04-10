@@ -26,23 +26,23 @@ The repository folder is structured as follows:
     - **plotROC_kfold**: Code (R script) to plot AUC graphics for MaxEnt models
 - **Data/**: Data used in the paper, all in the CRS ETRS89 / UTM 31 N.  
   - **Rasters/**: All the nescessary rasters for the paper
-    - **11- Height**: Resampled version (100 x 100 meters) of the original 25 x 25 meter Digital Elevation Model (DEM) raster supplied by GLO-30 Copernicus 
+    - **11- Height**: Resampled version (100 x 100 meters) of the original 25 x 25 meter Digital Elevation Model (DEM - .tiff) raster supplied by GLO-30 Copernicus 
     (https://ec.europa.eu/eurostat/web/gisco/geodata/digital-elevation-model/copernicus#Elevation, last accessed on 15/12/2025 at 15:55)
-    - **12- Slope in degrees**: Slope on degrees raster
-    - **13- TWI**: Topographic Wetness Index raster
-    - **14- MSRM 3000**: MSRM raster
-    - **15- Northing**: Northing raster
-    - **16- Easting**: Easting raster
-    - **21- Path frequency**: Path Frequency raster
-    - **22- Path visibility (Top 10%)**: Path Visibility raster
-    - **23- Visibility Index**: Total viewshed Index raster
-    - **24- Sky View Factor**: Sky View Factor raster 
-    - **25- Visual Prominance index 3000 (MSRM)**: Visual Prominance Index raster
-    - **31- Agri suitability**: Agricultural suitability index raster
-    - **32- Cost from rivers and lakes**: Cost from rivers and lakes raster
-    - **33- Cost from coast**: Cost from coast raster
-    - **34- Cost from variscita**:  Cost from coast variscite mines
-    - **35- Cost from salt**: Cost from slat outcrops
+    - **12- Slope in degrees**: Slope on degrees raster (.tiff) 
+    - **13- TWI**: Topographic Wetness Index raster (.tiff) 
+    - **14- MSRM 3000**: MSRM raster (.tiff) 
+    - **15- Northing**: Northing raster (.tiff) 
+    - **16- Easting**: Easting raster (.tiff) 
+    - **21- Path frequency**: Path Frequency raster (.tiff) 
+    - **22- Path visibility (Top 10%)**: Path Visibility raster (.tiff) 
+    - **23- Visibility Index**: Total viewshed Index raster (.tiff) 
+    - **24- Sky View Factor**: Sky View Factor raster (.tiff) 
+    - **25- Visual Prominance index 3000 (MSRM)**: Visual Prominance Index raster (.tiff) 
+    - **31- Agri suitability**: Agricultural suitability index raster (.tiff) 
+    - **32- Cost from rivers and lakes**: Cost from rivers and lakes raster (.tiff) 
+    - **33- Cost from coast**: Cost from coast raster (.tiff) 
+    - **34- Cost from variscita**:  Cost from coast variscite mines (.tiff) 
+    - **35- Cost from salt**: Cost from slat outcrops (.tiff) 
   - **Vectors/**: All the necessary vectors for the paper 
     - **Buff_27450_mod**: Shapefile (.shp and others) with the area under study limits
     - **fishnet_rast_cat_100_red_points_v3**: Shapefile (.shp and others) with mesh of 1km background points
