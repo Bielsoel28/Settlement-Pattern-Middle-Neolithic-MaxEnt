@@ -6,7 +6,7 @@ This repository contains the code and data for:
 
 ## Paper Authors
 
-Biel Soriano Elias (a), Anna Bach Gómez (a) & Miquel Molist (a)
+Biel Soriano Elias (a) & Anna Bach Gómez (a)
 
 a Autonomous University of Barcelona, Prehistory Departament, SAPPO-GRAMPO
 
