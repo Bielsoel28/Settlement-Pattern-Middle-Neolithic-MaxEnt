@@ -26,8 +26,8 @@ The repository folder is structured as follows:
     - **plotROC_kfold**: Code (R script) to plot AUC graphics for MaxEnt models
 - **Data/**: Data used in the paper, all in the CRS ETRS89 / UTM 31 N.  
   - **Rasters/**: All the nescessary rasters for the paper
-    - **11- Height**: Resampled version (100 x 100 meters) of the original 25 x 25 meter Digital Elevation Model (DEM - .tiff) raster supplied by GLO-30 Copernicus 
-    (https://ec.europa.eu/eurostat/web/gisco/geodata/digital-elevation-model/copernicus#Elevation, last accessed on 15/12/2025 at 15:55)
+    - **11- Height**: Resampled version (100 x 100 meters) of the original 25 x 25  meter Digital Elevation Model (DEM - .tiff) raster supplied by EU-DEM
+    (https://ec.europa.eu/eurostat/web/gisco/geodata/digital-elevation-model/eu-dem, last accessed on 15/12/2025 at 15:55)
     - **12- Slope in degrees**: Slope on degrees raster (.tiff) 
     - **13- TWI**: Topographic Wetness Index raster (.tiff) 
     - **14- MSRM 3000**: MSRM raster (.tiff) 
