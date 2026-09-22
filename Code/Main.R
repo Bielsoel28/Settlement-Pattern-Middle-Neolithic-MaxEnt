@@ -198,7 +198,7 @@ normality_results_df$Normal <- ifelse(normality_results_df$P_Value > 0.05, "Yes"
 # Save the results
 write.csv(normality_results_df, paste0("Results/Variables_cor/","Normality.csv"))
 
-# 2.3 Spearman correlation test ==================================================
+# 2.3 Spearman correlation test ================================================
 
 ## Spearman test
 sample_pred_cor <- cor(sample_pred, method = "spearman")
