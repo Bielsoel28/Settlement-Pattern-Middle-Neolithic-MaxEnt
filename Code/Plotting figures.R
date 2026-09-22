@@ -166,7 +166,7 @@ col_titles <- c(
   "Agri suitability",
   "Cost from rivers and lakes",
   "Cost from coast",
-  "Cost from variscita",
+  "Cost from variscite",
   "Cost from salt"
 )
 
