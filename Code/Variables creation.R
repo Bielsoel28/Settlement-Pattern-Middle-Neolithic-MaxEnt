@@ -999,7 +999,7 @@ for (i in seq_len(nrow(rivers_points))) {
   cc <- create_accum_cost(
     x = cost_raster,
     origins = rivers_points[i, ],
-    FUN = mean,
+    FUN = min,
     rescale = FALSE
   )
   
@@ -1097,7 +1097,7 @@ for (i in 1:nrow(coast_points)) {
     next  # skip this iteration
   }
   
-  cc <- create_accum_cost(x = cost_raster, origins = coast_points[i,], FUN = mean, rescale = FALSE)
+  cc <- create_accum_cost(x = cost_raster, origins = coast_points[i,], FUN = min, rescale = FALSE)
   
   # Update min_cc with the minimum value between the existing and the new cc
   min_cc <- min(min_cc, cc, na.rm = TRUE)
@@ -1156,7 +1156,7 @@ values(min_cc) <- NA
 #Compute cost of each point
 for (i in 1:nrow(salt)) {
   
-  cc <- create_accum_cost(x = cost_raster, origins = salt[i,], FUN = mean, rescale = FALSE)
+  cc <- create_accum_cost(x = cost_raster, origins = salt[i,], FUN = min, rescale = FALSE)
   
   # Update min_cc with the minimum value between the existing and the new cc
   min_cc <- min(min_cc, cc, na.rm = TRUE)
@@ -1204,7 +1204,7 @@ general <- st_read("Conjunts/general/general.shp")
 mina <- general[general$FID_ == 1.269 ,]
 
 #Compute cost from point
-cc <- create_accum_cost(x = cost_raster, origins = mina, FUN = mean, rescale = FALSE)
+cc <- create_accum_cost(x = cost_raster, origins = mina, FUN = min, rescale = FALSE)
 cc <- resample(cc, rast_cat, method = "bilinear")
 
 #Adapt to final res and ext
